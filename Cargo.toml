@@ -1,0 +1,20 @@
+[workspace]
+resolver = "3"
+members = [
+  "crates/winio-winui-ext",
+  "apps/gallery",
+]
+
+[workspace.package]
+edition = "2024"
+version = "0.0.0"
+
+[workspace.dependencies]
+winio = { version = "0.12.0", default-features = false, features = ["winui"] }
+winio-handle = { version = "0.7.0", features = ["winui"] }
+winio-winui3 = { version = "=0.4.4", features = [
+  "UI_Composition",
+  "UI_Xaml_Controls",
+  "UI_Xaml_Controls_Primitives",
+] }
+windows = { version = "0.62", features = ["Foundation"] }

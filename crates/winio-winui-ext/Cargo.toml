@@ -1,0 +1,11 @@
+[package]
+name = "winio-winui-ext"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+winio.workspace = true
+winio-handle.workspace = true
+winio-winui3.workspace = true
+windows.workspace = true

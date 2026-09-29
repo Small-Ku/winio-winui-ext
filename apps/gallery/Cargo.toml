@@ -1,0 +1,9 @@
+[package]
+name = "winio-winui-ext-gallery"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+winio.workspace = true
+winio-winui-ext = { path = "../../crates/winio-winui-ext" }
