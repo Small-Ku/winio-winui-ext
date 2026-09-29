@@ -48,6 +48,9 @@ mod tests {
         assert!(generated.contains("pub struct NavigationViewItem("));
         assert!(generated.contains("pub struct NavigationViewSelectionChangedEventArgs("));
         assert!(generated.contains("pub struct NavigationViewPaneDisplayMode(pub i32)"));
+        assert!(generated.contains("pub struct NumberBox("));
+        assert!(generated.contains("pub struct NumberBoxValueChangedEventArgs("));
+        assert!(generated.contains("pub struct NumberBoxSpinButtonPlacementMode(pub i32)"));
         assert!(generated.contains("windows::Foundation::TypedEventHandler"));
         for shared in [
             "winio_winui3::Microsoft::UI::Xaml::DependencyObject",

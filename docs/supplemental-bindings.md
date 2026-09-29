@@ -2,8 +2,9 @@
 
 `winio-winui-bindings` holds a narrow generated projection for WinUI controls that
 are absent from `winio-winui3 0.4.4`. The current canaries are a narrow
-`Microsoft.UI.Xaml.Controls.InfoBar` surface and a minimal
-`Microsoft.UI.Xaml.Controls.NavigationView` surface.
+`Microsoft.UI.Xaml.Controls.InfoBar` surface, a minimal
+`Microsoft.UI.Xaml.Controls.NavigationView` surface, and a numeric-input
+`Microsoft.UI.Xaml.Controls.NumberBox` surface.
 
 The projection deliberately reuses `winio-winui3` for shared XAML/base types such
 as `DependencyObject`, `UIElement`, `FrameworkElement`, and `Control` through
@@ -62,7 +63,7 @@ of this narrow projection, such as action-button/template/statics and close-even
 surface. The generator treats those as non-canary omissions, fails if a warning
 affects a promised canary method, and verifies required methods inside the
 generated implementation for their owning runtime class. This crate must not be
-described as a complete projection for either control.
+described as a complete projection for these controls.
 
 NavigationView has a minimal canary surface for menu items, item content and
 tags, pane display mode, pane open state, selected item, and `SelectionChanged`.
@@ -71,6 +72,16 @@ SelectionChanged is supported because the generator references
 the workspace Windows.Foundation projection. The wrapper emits the selected
 stable item id through Winio's `ComponentSender` and removes its event token on
 drop.
+NumberBox adds a distinct numeric-input canary. Its promised surface includes
+minimum/maximum/value/small-change, spin-button placement, and native
+`ValueChanged` registration/removal; `NumberBoxValueChangedEventArgs` exposes
+both old and new `f64` values. The wrapper maps the generated placement enum to
+a small public Rust enum and emits typed value-change events through
+`ComponentSender`. The Gallery configures `0..=100`, small change `1`, and
+initial value `10`. UI Automation observes the native control as
+`ControlType.Spinner` / `Microsoft.UI.Xaml.Controls.NumberBox`, verifies its
+`RangeValuePattern` metadata, sets the value to `42`, and checks the exact
+Winio-owned title `Winio WinUI Extensions — number: 42`.
 
 Templates, styles, dependency-property statics, AutoSuggestBox, InfoBadge,
 icons, advanced pane/header/footer APIs, back-requested, ItemInvoked, and other

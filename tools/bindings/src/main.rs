@@ -188,6 +188,93 @@ const CANARIES: &[CanaryContract] = &[
             "NavigationViewPaneDisplayMode",
         ],
     },
+    CanaryContract {
+        name: "NumberBox",
+        filters: &[
+            "Microsoft.UI.Xaml.Controls.NumberBox",
+            "Microsoft.UI.Xaml.Controls.NumberBoxValueChangedEventArgs",
+            "Microsoft.UI.Xaml.Controls.NumberBoxSpinButtonPlacementMode",
+        ],
+        required_methods: &[
+            RequiredMethod {
+                type_name: "NumberBox",
+                fragment: "pub fn Minimum(",
+            },
+            RequiredMethod {
+                type_name: "NumberBox",
+                fragment: "pub fn SetMinimum(",
+            },
+            RequiredMethod {
+                type_name: "NumberBox",
+                fragment: "pub fn Maximum(",
+            },
+            RequiredMethod {
+                type_name: "NumberBox",
+                fragment: "pub fn SetMaximum(",
+            },
+            RequiredMethod {
+                type_name: "NumberBox",
+                fragment: "pub fn Value(",
+            },
+            RequiredMethod {
+                type_name: "NumberBox",
+                fragment: "pub fn SetValue(",
+            },
+            RequiredMethod {
+                type_name: "NumberBox",
+                fragment: "pub fn SmallChange(",
+            },
+            RequiredMethod {
+                type_name: "NumberBox",
+                fragment: "pub fn SetSmallChange(",
+            },
+            RequiredMethod {
+                type_name: "NumberBox",
+                fragment: "pub fn SpinButtonPlacementMode(",
+            },
+            RequiredMethod {
+                type_name: "NumberBox",
+                fragment: "pub fn SetSpinButtonPlacementMode(",
+            },
+            RequiredMethod {
+                type_name: "NumberBox",
+                fragment: "pub fn ValueChanged<",
+            },
+            RequiredMethod {
+                type_name: "NumberBox",
+                fragment: "pub fn RemoveValueChanged(",
+            },
+            RequiredMethod {
+                type_name: "NumberBoxValueChangedEventArgs",
+                fragment: "pub fn OldValue(",
+            },
+            RequiredMethod {
+                type_name: "NumberBoxValueChangedEventArgs",
+                fragment: "pub fn NewValue(",
+            },
+        ],
+        warning_markers: &[
+            "INumberBox.get_Minimum",
+            "INumberBox.put_Minimum",
+            "INumberBox.get_Maximum",
+            "INumberBox.put_Maximum",
+            "INumberBox.get_Value",
+            "INumberBox.put_Value",
+            "INumberBox.get_SmallChange",
+            "INumberBox.put_SmallChange",
+            "INumberBox.get_SpinButtonPlacementMode",
+            "INumberBox.put_SpinButtonPlacementMode",
+            "INumberBox.add_ValueChanged",
+            "INumberBox.remove_ValueChanged",
+            "INumberBoxValueChangedEventArgs.get_OldValue",
+            "INumberBoxValueChangedEventArgs.get_NewValue",
+        ],
+        required_types: &[
+            "NumberBox",
+            "NumberBoxValueChangedEventArgs",
+            "NumberBoxSpinButtonPlacementMode",
+        ],
+    },
 ];
 
 #[derive(Debug)]
@@ -239,7 +326,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             fs::write(path, generated)?;
         }
         println!(
-            "generated supplemental InfoBar and NavigationView canary bindings from Windows App SDK {WINDOWS_APP_SDK_VERSION}"
+            "generated supplemental InfoBar, NavigationView, and NumberBox canary bindings from Windows App SDK {WINDOWS_APP_SDK_VERSION}"
         );
     }
     Ok(())
@@ -475,7 +562,7 @@ fn generate(
     }
     if !warnings.is_empty() {
         eprintln!(
-            "bindgen reported {} dependency-closure warnings outside the promised InfoBar and NavigationView canaries; deferred surface remains omitted",
+            "bindgen reported {} dependency-closure warnings outside the promised canary surfaces; deferred surface remains omitted",
             warnings.len()
         );
         for warning in warnings.iter().take(12) {

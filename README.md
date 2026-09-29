@@ -22,7 +22,7 @@ mise run build
 mise run smoke
 ```
 
-`smoke` builds the Gallery and uses Windows UI Automation to verify the visible supplemental InfoBar and minimal NavigationView canaries, plus the native ToggleButton event path. Normal builds use committed generated Rust only and do not acquire WinMD metadata; metadata regeneration and comparison are separate gates:
+`smoke` builds the Gallery and uses Windows UI Automation to verify the visible supplemental InfoBar, NavigationView, and NumberBox canaries, plus the native ToggleButton event path. Normal builds use committed generated Rust only and do not acquire WinMD metadata; metadata regeneration and comparison are separate gates:
 
 ```powershell
 mise run bindings
@@ -31,6 +31,6 @@ mise run bindings-check
 
 ## Current scope
 
-The reference wrappers are a native WinUI `Primitives::ToggleButton`, a supplemental InfoBar canary, and a minimal NavigationView canary. ToggleButton preserves its two-state interaction default; the Gallery enables three-state mode and verifies a real `None`/indeterminate round-trip. Because the 0.4.4 generated `IsChecked` getter cannot represent a null `IReference<bool>`, that nullable read stays behind one narrow raw `IToggleButton` ABI call. The NavigationView wrapper emits stable selected item IDs through `ComponentSender`; the Gallery verifies a native selection changes the Winio-owned window title. Both supplemental controls are generated from a pinned Windows App SDK metadata baseline and reuse shared types from `winio-winui3 0.4.4`; details and provenance are in [the supplemental bindings notes](docs/supplemental-bindings.md). See [the control inventory](docs/control-inventory.md) for projected controls and the canary status.
+The reference wrappers are a native WinUI `Primitives::ToggleButton` plus supplemental InfoBar, NavigationView, and NumberBox canaries. ToggleButton preserves its two-state interaction default; the Gallery enables three-state mode and verifies a real `None`/indeterminate round-trip. Because the 0.4.4 generated `IsChecked` getter cannot represent a null `IReference<bool>`, that nullable read stays behind one narrow raw `IToggleButton` ABI call. NavigationView emits stable selected item IDs through `ComponentSender`. NumberBox exposes value/range/small-change/spin-placement plus typed old/new `ValueChanged` events; the Gallery drives it through UI Automation `RangeValuePattern` and verifies the Winio-owned result. Supplemental controls are generated from a pinned Windows App SDK metadata baseline and reuse shared types from `winio-winui3 0.4.4`; details and provenance are in [the supplemental bindings notes](docs/supplemental-bindings.md). See [the control inventory](docs/control-inventory.md) for projected controls and the canary status.
 
 No mass wrapper set, custom-drawn substitutes, packaging, or release workflow is included in this round.

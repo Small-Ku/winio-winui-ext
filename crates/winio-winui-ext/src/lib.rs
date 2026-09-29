@@ -7,12 +7,14 @@ mod native;
 mod controls {
     mod info_bar;
     mod navigation_view;
+    mod number_box;
     mod toggle_button;
 
     pub use info_bar::{InfoBar, InfoBarMessage};
     pub use navigation_view::{
         NavigationView, NavigationViewEvent, NavigationViewItemDescriptor, NavigationViewMessage,
     };
+    pub use number_box::{NumberBox, NumberBoxEvent, NumberBoxMessage, NumberBoxSpinPlacement};
     pub use toggle_button::{ToggleButton, ToggleButtonEvent, ToggleButtonMessage};
 }
 
