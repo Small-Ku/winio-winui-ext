@@ -23,6 +23,9 @@ mod tests {
             "IFrameworkElementOverrides",
             "IFrameworkElementProtected",
             "Control",
+            "ContentControl",
+            "IContentControl",
+            "IContentControlOverrides",
             "IControl",
             "IControlOverrides",
             "IControlProtected",
@@ -41,11 +44,19 @@ mod tests {
         }
         assert!(generated.contains("pub struct InfoBar("));
         assert!(generated.contains("pub struct InfoBarSeverity(pub i32)"));
+        assert!(generated.contains("pub struct NavigationView("));
+        assert!(generated.contains("pub struct NavigationViewItem("));
+        assert!(generated.contains("pub struct NavigationViewSelectionChangedEventArgs("));
+        assert!(generated.contains("pub struct NavigationViewPaneDisplayMode(pub i32)"));
+        assert!(generated.contains("windows::Foundation::TypedEventHandler"));
         for shared in [
             "winio_winui3::Microsoft::UI::Xaml::DependencyObject",
             "winio_winui3::Microsoft::UI::Xaml::UIElement",
             "winio_winui3::Microsoft::UI::Xaml::FrameworkElement",
             "winio_winui3::Microsoft::UI::Xaml::Controls::Control",
+            "winio_winui3::Microsoft::UI::Xaml::Controls::ContentControl",
+            "winio_winui3::Microsoft::UI::Xaml::Controls::IContentControl",
+            "winio_winui3::Microsoft::UI::Xaml::Controls::IContentControlOverrides",
             "winio_winui3::Microsoft::UI::Xaml::IUIElement",
             "winio_winui3::Microsoft::UI::Xaml::Controls::IControl",
             "winio_winui3::Microsoft::UI::Composition::IAnimationObject",

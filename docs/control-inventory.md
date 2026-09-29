@@ -23,17 +23,19 @@ Checked by searching the generated public controls module; these names are not p
 
 - `AutoSuggestBox`
 - `ToggleSwitch`
-- `NavigationView`
 - `NumberBox`
 - `TreeView`
 - `TeachingTip`
 - `Expander`, `FlipView`, `PersonPicture`, `CommandBar`, and `MenuBar`
 - `CalendarDatePicker`, `DatePicker`, `TimePicker`, `ColorPicker`, `RatingControl`, `SplitButton`, and `DropDownButton`
 
-`InfoBar` now has a **supplemental canary projection/wrapper** in
-`winio-winui-bindings`; the current generated surface is intentionally limited to the
-wrapper's canary properties rather than the full InfoBar API, and InfoBar remains absent
-from the upstream 0.4.4 projection.
-`NavigationView`, `TreeView`, and the other listed controls remain absent and
-are not wrapped in this round. See [supplemental bindings](supplemental-bindings.md)
-for its provenance and the narrow shared-type reference boundary.
+`InfoBar` has a **supplemental canary projection** in `winio-winui-bindings`
+and a wrapper in `winio-winui-ext`; the generated surface is intentionally
+limited to the wrapper's canary properties rather than the full InfoBar API,
+and InfoBar remains absent from the upstream 0.4.4 projection.
+`NavigationView` has a minimal supplemental canary projection and a wrapper
+for menu selection, stable item identity, and pane display mode; it is not a
+full NavigationView projection. `TreeView` and the other listed controls remain
+absent and are not wrapped in this round. See
+[supplemental bindings](supplemental-bindings.md) for provenance, deferred
+surface, and the narrow shared-type reference boundary.

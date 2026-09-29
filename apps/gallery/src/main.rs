@@ -1,11 +1,15 @@
 use winio::prelude::*;
-use winio_winui_ext::{InfoBar, ToggleButton, ToggleButtonEvent};
+use winio_winui_ext::{
+    InfoBar, NavigationView, NavigationViewEvent, NavigationViewItemDescriptor, ToggleButton,
+    ToggleButtonEvent,
+};
 
 const INFO_BAR_MESSAGE: &str = "Supplemental InfoBar canary";
 
 struct MainModel {
     window: Child<Window>,
     info_bar: Child<InfoBar>,
+    navigation: Child<NavigationView>,
     toggle: Child<ToggleButton>,
 }
 
@@ -13,6 +17,7 @@ struct MainModel {
 enum MainMessage {
     Noop,
     ToggleStateChanged(Option<bool>),
+    NavigationSelected(Option<String>),
     Close,
 }
 
@@ -34,16 +39,24 @@ impl Component for MainModel {
         init! {
             window: Window = (()) => {
                 text: "Winio WinUI Extensions",
-                size: Size::new(640.0, 360.0),
+                size: Size::new(840.0, 600.0),
             },
             info_bar: InfoBar = (&window) => {
-                size: Size::new(580.0, 80.0),
+                size: Size::new(480.0, 80.0),
+            },
+            navigation: NavigationView = (&window) => {
+                size: Size::new(300.0, 560.0),
             },
             toggle: ToggleButton = (&window) => {
                 text: "Native WinUI ToggleButton",
-                size: Size::new(240.0, 44.0),
+                size: Size::new(260.0, 44.0),
             },
         }
+
+        navigation.set_items(&[
+            NavigationViewItemDescriptor::new("overview", "Overview"),
+            NavigationViewItemDescriptor::new("details", "Details"),
+        ])?;
 
         // Exercise the nullable WinRT state through the public wrapper API.
         // The smoke test verifies both this initial round-trip and a later UIA
@@ -64,6 +77,7 @@ impl Component for MainModel {
         Ok(Self {
             window,
             info_bar,
+            navigation,
             toggle,
         })
     }
@@ -79,11 +93,14 @@ impl Component for MainModel {
                 ToggleButtonEvent::StateChanged(state) => MainMessage::ToggleStateChanged(state),
             },
             self.info_bar => {},
+            self.navigation => {
+                NavigationViewEvent::SelectionChanged { selected_id } => MainMessage::NavigationSelected(selected_id),
+            },
         }
     }
 
     async fn update_children(&mut self) -> Result<bool> {
-        update_children!(self.window, self.info_bar, self.toggle)
+        update_children!(self.window, self.info_bar, self.navigation, self.toggle)
     }
 
     async fn update(
@@ -97,6 +114,12 @@ impl Component for MainModel {
                 self.window.set_text(state_title(state))?;
                 Ok(false)
             }
+            MainMessage::NavigationSelected(Some(id)) => {
+                self.window
+                    .set_text(format!("Winio WinUI Extensions — navigation: {id}"))?;
+                Ok(false)
+            }
+            MainMessage::NavigationSelected(None) => Ok(true),
             MainMessage::Close => {
                 sender.output(());
                 Ok(false)
@@ -106,25 +129,28 @@ impl Component for MainModel {
 
     fn render(&mut self, _sender: &ComponentSender<Self>) -> Result<()> {
         let client = self.window.client_size()?;
-        let info_bar_left = client.width.clamp(0.0, 20.0);
-        let info_bar_top = client.height.clamp(0.0, 18.0);
-        let info_bar_width = (client.width - info_bar_left * 2.0).max(0.0);
-        let info_bar_height = (client.height - info_bar_top).clamp(0.0, 82.0);
+        let nav_size = self.navigation.size()?;
+        self.navigation.set_loc(Point::new(10.0, 10.0))?;
+        self.navigation.set_size(Size::new(
+            nav_size.width.min(300.0),
+            (client.height - 20.0).max(0.0),
+        ))?;
+        let info_bar_left = 330.0;
+        let info_bar_top = 18.0;
+        let info_bar_width = (client.width - info_bar_left - 20.0).max(0.0);
+        let info_bar_height = 82.0;
         self.info_bar
             .set_loc(Point::new(info_bar_left, info_bar_top))?;
         self.info_bar
             .set_size(Size::new(info_bar_width, info_bar_height))?;
-        let button = self.toggle.size()?;
-        self.toggle.set_loc(Point::new(
-            (client.width - button.width) / 2.0,
-            (client.height - button.height).clamp(0.0, 136.0),
-        ))?;
+        self.toggle.set_loc(Point::new(440.0, 150.0))?;
         Ok(())
     }
 
     fn render_children(&mut self) -> Result<()> {
         self.window.render()?;
         self.info_bar.render()?;
+        self.navigation.render()?;
         self.toggle.render()
     }
 }

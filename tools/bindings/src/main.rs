@@ -40,6 +40,154 @@ const SHARED_PROJECTION_TYPES: &[&str] = &[
     "Microsoft.UI.Xaml.Controls.IControlProtected",
     "Microsoft.UI.Xaml.RoutedEventArgs",
     "Microsoft.UI.Xaml.RoutedEventHandler",
+    "Microsoft.UI.Xaml.Controls.ContentControl",
+    "Microsoft.UI.Xaml.Controls.IContentControl",
+    "Microsoft.UI.Xaml.Controls.IContentControlOverrides",
+];
+
+struct RequiredMethod {
+    type_name: &'static str,
+    fragment: &'static str,
+}
+
+struct CanaryContract {
+    name: &'static str,
+    filters: &'static [&'static str],
+    required_methods: &'static [RequiredMethod],
+    warning_markers: &'static [&'static str],
+    required_types: &'static [&'static str],
+}
+
+const CANARIES: &[CanaryContract] = &[
+    CanaryContract {
+        name: "InfoBar",
+        filters: &[
+            "Microsoft.UI.Xaml.Controls.InfoBar",
+            "Microsoft.UI.Xaml.Controls.InfoBarSeverity",
+        ],
+        required_methods: &[
+            RequiredMethod {
+                type_name: "InfoBar",
+                fragment: "pub fn IsOpen(",
+            },
+            RequiredMethod {
+                type_name: "InfoBar",
+                fragment: "pub fn SetIsOpen(",
+            },
+            RequiredMethod {
+                type_name: "InfoBar",
+                fragment: "pub fn Message(",
+            },
+            RequiredMethod {
+                type_name: "InfoBar",
+                fragment: "pub fn SetMessage(",
+            },
+            RequiredMethod {
+                type_name: "InfoBar",
+                fragment: "pub fn IsClosable(",
+            },
+            RequiredMethod {
+                type_name: "InfoBar",
+                fragment: "pub fn SetIsClosable(",
+            },
+        ],
+        warning_markers: &[
+            "IInfoBar.get_IsOpen",
+            "IInfoBar.put_IsOpen",
+            "IInfoBar.get_Message",
+            "IInfoBar.put_Message",
+            "IInfoBar.get_IsClosable",
+            "IInfoBar.put_IsClosable",
+        ],
+        required_types: &["InfoBar", "InfoBarSeverity"],
+    },
+    CanaryContract {
+        name: "NavigationView",
+        filters: &[
+            "Microsoft.UI.Xaml.Controls.NavigationView",
+            "Microsoft.UI.Xaml.Controls.NavigationViewItem",
+            "Microsoft.UI.Xaml.Controls.NavigationViewSelectionChangedEventArgs",
+            "Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode",
+        ],
+        required_methods: &[
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn MenuItems(",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn SelectionChanged<",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn RemoveSelectionChanged(",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn SelectedItem(",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn IsPaneOpen(",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn SetIsPaneOpen(",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn PaneDisplayMode(",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn SetPaneDisplayMode(",
+            },
+            RequiredMethod {
+                type_name: "NavigationViewItem",
+                fragment: "pub fn SetContent<",
+            },
+            RequiredMethod {
+                type_name: "NavigationViewItem",
+                fragment: "pub fn SetTag<",
+            },
+            RequiredMethod {
+                type_name: "NavigationViewItem",
+                fragment: "pub fn SelectsOnInvoked(",
+            },
+            RequiredMethod {
+                type_name: "NavigationViewItem",
+                fragment: "pub fn SetSelectsOnInvoked(",
+            },
+            RequiredMethod {
+                type_name: "NavigationViewSelectionChangedEventArgs",
+                fragment: "pub fn SelectedItem(",
+            },
+            RequiredMethod {
+                type_name: "NavigationViewSelectionChangedEventArgs",
+                fragment: "pub fn IsSettingsSelected(",
+            },
+        ],
+        warning_markers: &[
+            "INavigationView.get_MenuItems",
+            "INavigationView.add_SelectionChanged",
+            "INavigationView.remove_SelectionChanged",
+            "INavigationView.get_SelectedItem",
+            "INavigationView.get_IsPaneOpen",
+            "INavigationView.put_IsPaneOpen",
+            "INavigationView2.get_PaneDisplayMode",
+            "INavigationView2.put_PaneDisplayMode",
+            "INavigationViewItem2.get_SelectsOnInvoked",
+            "INavigationViewItem2.put_SelectsOnInvoked",
+            "INavigationViewSelectionChangedEventArgs.get_SelectedItem",
+            "INavigationViewSelectionChangedEventArgs.get_IsSettingsSelected",
+        ],
+        required_types: &[
+            "NavigationView",
+            "NavigationViewItem",
+            "NavigationViewSelectionChangedEventArgs",
+            "NavigationViewPaneDisplayMode",
+        ],
+    },
 ];
 
 #[derive(Debug)]
@@ -91,7 +239,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             fs::write(path, generated)?;
         }
         println!(
-            "generated supplemental InfoBar bindings from Windows App SDK {WINDOWS_APP_SDK_VERSION}"
+            "generated supplemental InfoBar and NavigationView canary bindings from Windows App SDK {WINDOWS_APP_SDK_VERSION}"
         );
     }
     Ok(())
@@ -281,71 +429,78 @@ fn generate(
         args.push(input.path.to_string_lossy().into_owned());
     }
     args.extend(["--out".into(), raw.clone(), "--overrides".into()]);
-    args.extend([
-        "--filter".into(),
-        "Microsoft.UI.Xaml.Controls.InfoBar".into(),
-        "--filter".into(),
-        "Microsoft.UI.Xaml.Controls.InfoBarSeverity".into(),
-    ]);
+    for canary in CANARIES {
+        for filter in canary.filters {
+            args.extend(["--filter".into(), (*filter).into()]);
+        }
+    }
     for type_name in SHARED_PROJECTION_TYPES {
         args.extend([
             "--reference".into(),
             format!("winio_winui3,full,{type_name}"),
         ]);
     }
+    args.extend([
+        "--reference".into(),
+        "windows,full,Windows.Foundation.TypedEventHandler".into(),
+    ]);
     let mut warnings: Vec<_> = overrides_windows_bindgen::bindgen(&args)
         .iter()
         .cloned()
         .collect();
     warnings.sort();
     warnings.dedup();
-    const CANARY_METHODS: &[&str] = &[
-        "IInfoBar.get_IsOpen",
-        "IInfoBar.put_IsOpen",
-        "IInfoBar.get_Message",
-        "IInfoBar.put_Message",
-        "IInfoBar.get_IsClosable",
-        "IInfoBar.put_IsClosable",
-    ];
-    let canary_warnings: Vec<_> = warnings
-        .iter()
-        .filter(|warning| CANARY_METHODS.iter().any(|method| warning.contains(method)))
-        .collect();
-    if !canary_warnings.is_empty() {
-        return Err(format!(
-            "bindgen skipped required InfoBar canary surface because of unresolved dependencies:\n{}",
-            canary_warnings
-                .iter()
-                .map(|warning| warning.as_str())
-                .collect::<Vec<_>>()
-                .join("\n")
-        )
-        .into());
+    for canary in CANARIES {
+        let canary_warnings: Vec<_> = warnings
+            .iter()
+            .filter(|warning| {
+                canary
+                    .warning_markers
+                    .iter()
+                    .any(|marker| warning.contains(marker))
+            })
+            .collect();
+        if !canary_warnings.is_empty() {
+            return Err(format!(
+                "bindgen skipped required {} canary surface because of unresolved dependencies:\n{}",
+                canary.name,
+                canary_warnings
+                    .iter()
+                    .map(|warning| warning.as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            )
+            .into());
+        }
     }
     if !warnings.is_empty() {
         eprintln!(
-            "bindgen reported {} non-canary dependency-closure warnings; required InfoBar canary methods are intact",
+            "bindgen reported {} dependency-closure warnings outside the promised InfoBar and NavigationView canaries; deferred surface remains omitted",
             warnings.len()
         );
         for warning in warnings.iter().take(12) {
             eprintln!("  {warning}");
         }
     }
-    let source = fs::read_to_string(&raw_output)?;
+    // WinMD uses `Windows.Foundation`, while the `windows` Rust crate exposes
+    // that namespace at `windows::Foundation` without a nested `Windows` module.
+    let mut source = fs::read_to_string(&raw_output)?
+        .replace("windows::Windows::Foundation::", "windows::Foundation::");
+    // This abstract metadata superclass is absent from winio-winui3. The
+    // supplemental item projection emits the concrete item's own methods and
+    // interfaces, so omit only the unprojected hierarchy convenience entry.
+    source = source.replace("                    NavigationViewItemBase,\n", "");
     validate_projection(&source)?;
-    for method in [
-        "pub fn IsOpen(",
-        "pub fn SetIsOpen(",
-        "pub fn Message(",
-        "pub fn SetMessage(",
-        "pub fn IsClosable(",
-        "pub fn SetIsClosable(",
-    ] {
-        if !source.contains(method) {
-            return Err(format!(
-                "generated bindings are missing required canary method `{method}`"
-            )
-            .into());
+    for canary in CANARIES {
+        for method in canary.required_methods {
+            let implementation = implementation_block(&source, method.type_name)?;
+            if !implementation.contains(method.fragment) {
+                return Err(format!(
+                    "generated bindings are missing required {} canary method `{}` on `{}`",
+                    canary.name, method.fragment, method.type_name
+                )
+                .into());
+            }
         }
     }
     let generated = format!("{HEADER}{source}");
@@ -369,6 +524,24 @@ fn generate(
     Ok((generated, provenance))
 }
 
+fn implementation_block<'a>(
+    source: &'a str,
+    type_name: &str,
+) -> Result<&'a str, Box<dyn std::error::Error>> {
+    let marker = format!("impl {type_name} {{");
+    let start = source
+        .find(&marker)
+        .ok_or_else(|| format!("generated bindings have no `{marker}` block"))?;
+    let body_start = start + marker.len();
+    let end = source[body_start..]
+        .find("\n                impl ")
+        .map(|offset| body_start + offset)
+        .ok_or_else(|| {
+            format!("generated `{type_name}` implementation has no closing impl boundary")
+        })?;
+    Ok(&source[body_start..end])
+}
+
 fn validate_projection(source: &str) -> Result<(), Box<dyn std::error::Error>> {
     for full_name in SHARED_PROJECTION_TYPES {
         let type_name = full_name.rsplit('.').next().unwrap();
@@ -378,8 +551,16 @@ fn validate_projection(source: &str) -> Result<(), Box<dyn std::error::Error>> {
             );
         }
     }
-    if !source.contains("pub struct InfoBar") {
-        return Err("bindgen did not emit the InfoBar runtime class".into());
+    for canary in CANARIES {
+        for required_type in canary.required_types {
+            if !source.contains(&format!("pub struct {required_type}")) {
+                return Err(format!(
+                    "bindgen did not emit required {} canary type {required_type}",
+                    canary.name
+                )
+                .into());
+            }
+        }
     }
     Ok(())
 }

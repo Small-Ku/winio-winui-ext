@@ -15,6 +15,7 @@ try {
     $deadline = [DateTime]::UtcNow.AddSeconds(30)
     $window = $null
     $button = $null
+    $detailsItem = $null
     $infoBarMessage = $null
     $processCondition = [System.Windows.Automation.PropertyCondition]::new(
         [System.Windows.Automation.AutomationElement]::ProcessIdProperty,
@@ -29,9 +30,16 @@ try {
     $infoBarCondition = [System.Windows.Automation.PropertyCondition]::new(
         [System.Windows.Automation.AutomationElement]::NameProperty,
         'Supplemental InfoBar canary')
+    $detailsCondition = [System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new(
+            [System.Windows.Automation.AutomationElement]::ControlTypeProperty,
+            [System.Windows.Automation.ControlType]::ListItem),
+        [System.Windows.Automation.PropertyCondition]::new(
+            [System.Windows.Automation.AutomationElement]::NameProperty,
+            'Details'))
     $initialTitle = 'Winio WinUI Extensions — state: indeterminate'
 
-    while ([DateTime]::UtcNow -lt $deadline -and ($null -eq $button -or $null -eq $infoBarMessage)) {
+    while ([DateTime]::UtcNow -lt $deadline -and ($null -eq $button -or $null -eq $infoBarMessage -or $null -eq $detailsItem)) {
         if ($process.HasExited) {
             throw "Gallery exited before UI Automation found its button (exit code $($process.ExitCode))."
         }
@@ -49,8 +57,13 @@ try {
                     [System.Windows.Automation.TreeScope]::Descendants,
                     $infoBarCondition)
             }
+            if ($null -eq $detailsItem) {
+                $detailsItem = $window.FindFirst(
+                    [System.Windows.Automation.TreeScope]::Descendants,
+                    $detailsCondition)
+            }
         }
-        if ($null -eq $button -or $null -eq $infoBarMessage) { Start-Sleep -Milliseconds 150 }
+        if ($null -eq $button -or $null -eq $infoBarMessage -or $null -eq $detailsItem) { Start-Sleep -Milliseconds 150 }
     }
     if ($null -eq $button) { throw 'Timed out waiting for the native ToggleButton in the gallery.' }
     if ($null -eq $infoBarMessage) {
@@ -64,6 +77,7 @@ try {
         ) -join "`n"
         throw "Timed out waiting for the InfoBar message in the UIA tree. Observed descendants:`n$observed"
     }
+    if ($null -eq $detailsItem) { throw 'Timed out waiting for the native NavigationView Details item in the UIA tree.' }
 
     $deadline = [DateTime]::UtcNow.AddSeconds(10)
     while ([DateTime]::UtcNow -lt $deadline -and $window.Current.Name -ne $initialTitle) {
@@ -92,15 +106,39 @@ try {
             if ($process.HasExited) {
                 throw "Gallery exited after InfoBar UIA discovery (exit code $($process.ExitCode))."
             }
-            Write-Output "PASS: UIA found '$($infoBarMessage.Current.Name)'; nullable state round-trip succeeded; UIA toggled '$($button.Current.Name)' and Winio observed '$($window.Current.Name)'."
-            exit 0
+            break
         }
         if ($process.HasExited) {
             throw "Gallery exited before the Winio-visible event result (exit code $($process.ExitCode))."
         }
         Start-Sleep -Milliseconds 100
     }
-    throw "Timed out waiting for a checked/unchecked Winio-visible title after toggling."
+    if ($validTitles -notcontains $window.Current.Name) {
+        throw 'Timed out waiting for a checked/unchecked Winio-visible title after toggling.'
+    }
+    $toggleTitle = $window.Current.Name
+
+    $selection = $detailsItem.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)
+    $selection.Select()
+    $navigationTitle = 'Winio WinUI Extensions — navigation: details'
+    $deadline = [DateTime]::UtcNow.AddSeconds(10)
+    while ([DateTime]::UtcNow -lt $deadline) {
+        $window = [System.Windows.Automation.AutomationElement]::RootElement.FindFirst(
+            [System.Windows.Automation.TreeScope]::Children,
+            $processCondition)
+        if ($null -ne $window -and $window.Current.Name -eq $navigationTitle) {
+            if ($process.HasExited) {
+                throw "Gallery exited after NavigationView selection (exit code $($process.ExitCode))."
+            }
+            Write-Output "PASS: UIA found '$($infoBarMessage.Current.Name)', toggled '$($button.Current.Name)' and observed '$toggleTitle', then selected '$($detailsItem.Current.Name)' and observed '$navigationTitle'."
+            exit 0
+        }
+        if ($process.HasExited) {
+            throw "Gallery exited before the Winio-visible NavigationView result (exit code $($process.ExitCode))."
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    throw "Timed out waiting for NavigationView selection title '$navigationTitle'."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

@@ -1,8 +1,9 @@
 # Supplemental WinUI bindings
 
 `winio-winui-bindings` holds a narrow generated projection for WinUI controls that
-are absent from `winio-winui3 0.4.4`. The current canary is
-`Microsoft.UI.Xaml.Controls.InfoBar`.
+are absent from `winio-winui3 0.4.4`. The current canaries are a narrow
+`Microsoft.UI.Xaml.Controls.InfoBar` surface and a minimal
+`Microsoft.UI.Xaml.Controls.NavigationView` surface.
 
 The projection deliberately reuses `winio-winui3` for shared XAML/base types such
 as `DependencyObject`, `UIElement`, `FrameworkElement`, and `Control` through
@@ -48,8 +49,7 @@ runtime bootstrap.
 
 ## Canary surface
 
-Round 3 intentionally proves only the small InfoBar surface required by the
-wrapper:
+The InfoBar canary proves only the small surface required by the wrapper:
 
 - `Message` / `SetMessage`
 - `IsOpen` / `SetIsOpen`
@@ -59,10 +59,24 @@ wrapper:
 `overrides-windows-bindgen 0.66.0` reports dependency-closure warnings for other
 InfoBar members and inherited control APIs whose dependency types are not part
 of this narrow projection, such as action-button/template/statics and close-event
-surface. The generator treats those as non-canary omissions, but fails if a
-warning affects any promised canary method and separately verifies that all six
-required methods exist in generated Rust. This crate must therefore not be
-described as a complete InfoBar projection yet.
+surface. The generator treats those as non-canary omissions, fails if a warning
+affects a promised canary method, and verifies required methods inside the
+generated implementation for their owning runtime class. This crate must not be
+described as a complete projection for either control.
+
+NavigationView has a minimal canary surface for menu items, item content and
+tags, pane display mode, pane open state, selected item, and `SelectionChanged`.
+SelectionChanged is supported because the generator references
+`Windows.Foundation.TypedEventHandler` to the existing `windows` crate, reusing
+the workspace Windows.Foundation projection. The wrapper emits the selected
+stable item id through Winio's `ComponentSender` and removes its event token on
+drop.
+
+Templates, styles, dependency-property statics, AutoSuggestBox, InfoBadge,
+icons, advanced pane/header/footer APIs, back-requested, ItemInvoked, and other
+event surfaces remain intentionally deferred. These closure warnings do not
+invalidate the canary contract. This work makes no full WinUI Gallery parity
+claim.
 
 Close-button event automation is likewise deferred. Its UIA representation and
 localized label have not been established as a stable test contract.
@@ -87,5 +101,6 @@ runtime, casts through normal COM/WinRT machinery to the existing
 existing ToggleButton nullable-state/event regression remains in the same smoke
 test.
 
-`NavigationView` is intentionally deferred to the next round, after this narrow
-projection boundary is accepted.
+The Gallery smoke additionally selects the native NavigationView `Details`
+item through UI Automation and verifies the exact Winio-owned window title
+`Winio WinUI Extensions — navigation: details`.
