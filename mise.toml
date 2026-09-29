@@ -33,6 +33,11 @@ run = "mbx check --locked --workspace --all-targets"
 description = "Build all workspace targets through Mr Boxington"
 run = "mbx build --locked --workspace --all-targets"
 
+[tasks.smoke]
+description = "Run the Windows UI Automation gallery smoke test"
+depends = ["build"]
+run = "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/smoke-gallery.ps1"
+
 [tasks.clippy]
 description = "Run Clippy with warnings denied through Mr Boxington"
 run = "mbx clippy --locked --workspace --all-targets -- -D warnings"

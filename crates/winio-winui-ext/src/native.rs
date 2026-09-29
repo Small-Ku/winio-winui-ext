@@ -24,11 +24,29 @@ impl NativeElement {
         let parent = parent.as_container();
         let canvas = parent.as_winui();
         canvas.Children()?.Append(&handle)?;
+        // Match Winio's WinUI backend: arrange an initial measure pass so
+        // native controls can report their desired size immediately.
+        canvas.Measure(windows::Foundation::Size {
+            Width: f32::INFINITY,
+            Height: f32::INFINITY,
+        })?;
 
         Ok(Self {
             handle,
             parent: canvas.downgrade()?,
         })
+    }
+
+    pub(crate) fn preferred_size(&self) -> Result<Size> {
+        let size = self.handle.MeasureOverride(windows::Foundation::Size {
+            Width: f32::INFINITY,
+            Height: f32::INFINITY,
+        })?;
+        Ok(Size::new(f64::from(size.Width), f64::from(size.Height)))
+    }
+
+    pub(crate) fn min_size(&self) -> Result<Size> {
+        Ok(Size::new(self.handle.MinWidth()?, self.handle.MinHeight()?))
     }
 }
 

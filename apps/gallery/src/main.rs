@@ -9,8 +9,16 @@ struct MainModel {
 #[derive(Debug)]
 enum MainMessage {
     Noop,
-    ToggleClicked,
+    ToggleStateChanged(Option<bool>),
     Close,
+}
+
+fn state_title(state: Option<bool>) -> &'static str {
+    match state {
+        Some(true) => "Winio WinUI Extensions — state: checked",
+        Some(false) => "Winio WinUI Extensions — state: unchecked",
+        None => "Winio WinUI Extensions — state: indeterminate",
+    }
 }
 
 impl Component for MainModel {
@@ -31,6 +39,13 @@ impl Component for MainModel {
             },
         }
 
+        // Exercise the nullable WinRT state through the public wrapper API.
+        // The smoke test verifies both this initial round-trip and a later UIA
+        // state change through the native event -> ComponentSender path.
+        toggle.set_three_state(true)?;
+        toggle.set_checked(None)?;
+        window.set_text(state_title(toggle.is_checked()?))?;
+
         window.show()?;
         Ok(Self { window, toggle })
     }
@@ -43,7 +58,7 @@ impl Component for MainModel {
                 WindowEvent::Resize => MainMessage::Noop,
             },
             self.toggle => {
-                ToggleButtonEvent::Click => MainMessage::ToggleClicked,
+                ToggleButtonEvent::StateChanged(state) => MainMessage::ToggleStateChanged(state),
             },
         }
     }
@@ -59,9 +74,8 @@ impl Component for MainModel {
     ) -> Result<bool> {
         match message {
             MainMessage::Noop => Ok(true),
-            MainMessage::ToggleClicked => {
-                self.window
-                    .set_text("Winio WinUI Extensions — native event received")?;
+            MainMessage::ToggleStateChanged(state) => {
+                self.window.set_text(state_title(state))?;
                 Ok(false)
             }
             MainMessage::Close => {
