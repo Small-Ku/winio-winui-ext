@@ -1,0 +1,13 @@
+[package]
+name = "winio-winui-bindings"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+windows.workspace = true
+windows-core.workspace = true
+windows-collections.workspace = true
+windows-future.workspace = true
+windows-numerics.workspace = true
+winio_winui3.workspace = true

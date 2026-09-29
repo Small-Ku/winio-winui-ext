@@ -22,10 +22,15 @@ mise run build
 mise run smoke
 ```
 
-`smoke` builds the gallery and uses Windows UI Automation to activate its native ToggleButton and verify that the Winio event path updates the window title.
+`smoke` builds the Gallery and uses Windows UI Automation to verify the visible supplemental InfoBar canary as well as the native ToggleButton event path. Normal builds use committed generated Rust only and do not acquire WinMD metadata; metadata regeneration and comparison are separate gates:
+
+```powershell
+mise run bindings
+mise run bindings-check
+```
 
 ## Current scope
 
-The reference wrapper is a native WinUI `Primitives::ToggleButton` with text, nullable checked state, state-change events, visibility, enabled state, and layout. It preserves WinUI's two-state interaction default; callers opt into three-state interaction explicitly. The Gallery enables three-state mode so the smoke test covers a real `None`/indeterminate round-trip. Because the 0.4.4 generated `IsChecked` getter cannot represent a null `IReference<bool>`, that nullable read is contained behind one narrow raw `IToggleButton` ABI call while the public wrapper remains safe. The bridge reports native preferred and minimum sizes. See [the control inventory](docs/control-inventory.md) for projected controls and important controls missing from the compatible projection.
+The reference wrappers are a native WinUI `Primitives::ToggleButton` and a supplemental InfoBar canary. ToggleButton preserves its two-state interaction default; the Gallery enables three-state mode and verifies a real `None`/indeterminate round-trip. Because the 0.4.4 generated `IsChecked` getter cannot represent a null `IReference<bool>`, that nullable read stays behind one narrow raw `IToggleButton` ABI call. InfoBar is generated from a pinned Windows App SDK metadata baseline and reuses shared types from `winio-winui3 0.4.4`; details and provenance are in [the supplemental bindings notes](docs/supplemental-bindings.md). See [the control inventory](docs/control-inventory.md) for projected controls and the canary status.
 
-No WinMD generation pipeline, mass wrapper set, custom-drawn substitutes, packaging, or release workflow is included in this round.
+No mass wrapper set, custom-drawn substitutes, packaging, or release workflow is included in this round.

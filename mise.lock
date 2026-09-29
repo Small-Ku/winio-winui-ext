@@ -7,6 +7,11 @@ version = "1.14.0"
 backend = "packslip:github.com/jdx/mr-boxington"
 specifiers = ["latest"]
 
+[tools.mr-boxington."platforms.windows-x64"]
+checksum = "sha256:5d102168bd30ac480da37b663edde883501aee4778bd757a547773d36cbcabfe"
+url = "https://github.com/jdx/mr-boxington/releases/download/v1.14.0/mbx-x86_64-pc-windows-msvc.zip"
+signer = "sigstore-oidc:https://github.com/jdx/mr-boxington/.github/workflows/release.yml"
+
 [[tools.rust]]
 version = "stable"
 backend = "core:rust"

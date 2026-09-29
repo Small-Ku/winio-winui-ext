@@ -3,8 +3,8 @@ use winio::elm::{Component, ComponentSender};
 use winio::handle::{AsWidget, BorrowedContainer, BorrowedWidget};
 use winio::primitive::{Enable, Failable, Layoutable, Point, Size, TextWidget, Visible};
 use winio::{Error, Result};
-use winui3::Microsoft::UI::Xaml::Controls::Primitives as MUXCP;
-use winui3::Microsoft::UI::Xaml::{Controls as MUXC, RoutedEventHandler};
+use winio_winui3::Microsoft::UI::Xaml::Controls::Primitives as MUXCP;
+use winio_winui3::Microsoft::UI::Xaml::{Controls as MUXC, RoutedEventHandler};
 
 use crate::native::NativeElement;
 

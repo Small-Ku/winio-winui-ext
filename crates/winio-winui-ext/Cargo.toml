@@ -7,5 +7,6 @@ publish = false
 [dependencies]
 winio.workspace = true
 winio-handle.workspace = true
-winio-winui3.workspace = true
+winio_winui3.workspace = true
+winio-winui-bindings.workspace = true
 windows.workspace = true

@@ -1,0 +1,12 @@
+[package]
+name = "winio-winui-bindings-tool"
+version.workspace = true
+edition.workspace = true
+publish = false
+
+[dependencies]
+overrides-windows-bindgen.workspace = true
+ureq = { version = "3", features = ["rustls"] }
+zip = { version = "2", default-features = false, features = ["deflate"] }
+roxmltree = "0.20"
+sha2 = "0.10"

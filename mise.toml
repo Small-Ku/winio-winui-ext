@@ -33,6 +33,18 @@ run = "mbx check --locked --workspace --all-targets"
 description = "Build all workspace targets through Mr Boxington"
 run = "mbx build --locked --workspace --all-targets"
 
+[tasks.bindings]
+description = "Acquire pinned Windows App SDK metadata and regenerate supplemental bindings"
+run = "cargo run --locked -p winio-winui-bindings-tool --"
+
+[tasks.bindings-check]
+description = "Regenerate supplemental bindings and compare with committed source"
+run = "cargo run --locked -p winio-winui-bindings-tool -- --check"
+
+[tasks.dependency-audit]
+description = "Show duplicate dependency versions for the workspace"
+run = "cargo tree -d"
+
 [tasks.smoke]
 description = "Run the Windows UI Automation gallery smoke test"
 depends = ["build"]

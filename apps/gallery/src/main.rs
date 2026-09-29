@@ -1,8 +1,11 @@
 use winio::prelude::*;
-use winio_winui_ext::{ToggleButton, ToggleButtonEvent};
+use winio_winui_ext::{InfoBar, ToggleButton, ToggleButtonEvent};
+
+const INFO_BAR_MESSAGE: &str = "Supplemental InfoBar canary";
 
 struct MainModel {
     window: Child<Window>,
+    info_bar: Child<InfoBar>,
     toggle: Child<ToggleButton>,
 }
 
@@ -33,6 +36,9 @@ impl Component for MainModel {
                 text: "Winio WinUI Extensions",
                 size: Size::new(640.0, 360.0),
             },
+            info_bar: InfoBar = (&window) => {
+                size: Size::new(580.0, 80.0),
+            },
             toggle: ToggleButton = (&window) => {
                 text: "Native WinUI ToggleButton",
                 size: Size::new(240.0, 44.0),
@@ -46,8 +52,20 @@ impl Component for MainModel {
         toggle.set_checked(None)?;
         window.set_text(state_title(toggle.is_checked()?))?;
 
+        // Exercise the generated InfoBar property setters/getters before it is
+        // exposed to the UI Automation smoke test.
+        info_bar.set_message(INFO_BAR_MESSAGE)?;
+        info_bar.set_is_closable(false)?;
+        info_bar.set_is_open(true)?;
+        assert_eq!(info_bar.message()?, INFO_BAR_MESSAGE);
+        assert!(info_bar.is_open()?);
+
         window.show()?;
-        Ok(Self { window, toggle })
+        Ok(Self {
+            window,
+            info_bar,
+            toggle,
+        })
     }
 
     async fn start(&mut self, sender: &ComponentSender<Self>) -> ! {
@@ -60,11 +78,12 @@ impl Component for MainModel {
             self.toggle => {
                 ToggleButtonEvent::StateChanged(state) => MainMessage::ToggleStateChanged(state),
             },
+            self.info_bar => {},
         }
     }
 
     async fn update_children(&mut self) -> Result<bool> {
-        update_children!(self.window, self.toggle)
+        update_children!(self.window, self.info_bar, self.toggle)
     }
 
     async fn update(
@@ -87,16 +106,25 @@ impl Component for MainModel {
 
     fn render(&mut self, _sender: &ComponentSender<Self>) -> Result<()> {
         let client = self.window.client_size()?;
+        let info_bar_left = client.width.clamp(0.0, 20.0);
+        let info_bar_top = client.height.clamp(0.0, 18.0);
+        let info_bar_width = (client.width - info_bar_left * 2.0).max(0.0);
+        let info_bar_height = (client.height - info_bar_top).clamp(0.0, 82.0);
+        self.info_bar
+            .set_loc(Point::new(info_bar_left, info_bar_top))?;
+        self.info_bar
+            .set_size(Size::new(info_bar_width, info_bar_height))?;
         let button = self.toggle.size()?;
         self.toggle.set_loc(Point::new(
             (client.width - button.width) / 2.0,
-            (client.height - button.height) / 2.0,
+            (client.height - button.height).clamp(0.0, 136.0),
         ))?;
         Ok(())
     }
 
     fn render_children(&mut self) -> Result<()> {
         self.window.render()?;
+        self.info_bar.render()?;
         self.toggle.render()
     }
 }

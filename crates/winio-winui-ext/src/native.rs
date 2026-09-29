@@ -4,7 +4,7 @@ use windows::core::{Interface, Weak};
 use winio::handle::{AsContainer, AsWidget, BorrowedWidget};
 use winio::primitive::{Enable, Failable, Layoutable, Point, Size, Visible};
 use winio::{Error, Result};
-use winui3::Microsoft::UI::Xaml::{self as MUX, Controls as MUXC};
+use winio_winui3::Microsoft::UI::Xaml::{self as MUX, Controls as MUXC};
 
 /// Owns a native WinUI `FrameworkElement` hosted inside a Winio `Canvas`.
 ///

@@ -15,6 +15,7 @@ try {
     $deadline = [DateTime]::UtcNow.AddSeconds(30)
     $window = $null
     $button = $null
+    $infoBarMessage = $null
     $processCondition = [System.Windows.Automation.PropertyCondition]::new(
         [System.Windows.Automation.AutomationElement]::ProcessIdProperty,
         $process.Id)
@@ -25,9 +26,12 @@ try {
         [System.Windows.Automation.PropertyCondition]::new(
             [System.Windows.Automation.AutomationElement]::NameProperty,
             'Native WinUI ToggleButton'))
+    $infoBarCondition = [System.Windows.Automation.PropertyCondition]::new(
+        [System.Windows.Automation.AutomationElement]::NameProperty,
+        'Supplemental InfoBar canary')
     $initialTitle = 'Winio WinUI Extensions — state: indeterminate'
 
-    while ([DateTime]::UtcNow -lt $deadline -and $null -eq $button) {
+    while ([DateTime]::UtcNow -lt $deadline -and ($null -eq $button -or $null -eq $infoBarMessage)) {
         if ($process.HasExited) {
             throw "Gallery exited before UI Automation found its button (exit code $($process.ExitCode))."
         }
@@ -35,13 +39,31 @@ try {
             [System.Windows.Automation.TreeScope]::Children,
             $processCondition)
         if ($null -ne $window) {
-            $button = $window.FindFirst(
-                [System.Windows.Automation.TreeScope]::Descendants,
-                $buttonCondition)
+            if ($null -eq $button) {
+                $button = $window.FindFirst(
+                    [System.Windows.Automation.TreeScope]::Descendants,
+                    $buttonCondition)
+            }
+            if ($null -eq $infoBarMessage) {
+                $infoBarMessage = $window.FindFirst(
+                    [System.Windows.Automation.TreeScope]::Descendants,
+                    $infoBarCondition)
+            }
         }
-        if ($null -eq $button) { Start-Sleep -Milliseconds 150 }
+        if ($null -eq $button -or $null -eq $infoBarMessage) { Start-Sleep -Milliseconds 150 }
     }
     if ($null -eq $button) { throw 'Timed out waiting for the native ToggleButton in the gallery.' }
+    if ($null -eq $infoBarMessage) {
+        $tree = $window.FindAll([System.Windows.Automation.TreeScope]::Descendants,
+            [System.Windows.Automation.Condition]::TrueCondition)
+        $observed = @(
+            for ($index = 0; $index -lt $tree.Count; $index++) {
+                $element = $tree.Item($index)
+                "Name='$($element.Current.Name)' ControlType='$($element.Current.ControlType.ProgrammaticName)' Class='$($element.Current.ClassName)'"
+            }
+        ) -join "`n"
+        throw "Timed out waiting for the InfoBar message in the UIA tree. Observed descendants:`n$observed"
+    }
 
     $deadline = [DateTime]::UtcNow.AddSeconds(10)
     while ([DateTime]::UtcNow -lt $deadline -and $window.Current.Name -ne $initialTitle) {
@@ -67,7 +89,10 @@ try {
             [System.Windows.Automation.TreeScope]::Children,
             $processCondition)
         if ($null -ne $window -and $validTitles -contains $window.Current.Name) {
-            Write-Output "PASS: nullable state round-trip succeeded; UIA toggled '$($button.Current.Name)' and Winio observed '$($window.Current.Name)'."
+            if ($process.HasExited) {
+                throw "Gallery exited after InfoBar UIA discovery (exit code $($process.ExitCode))."
+            }
+            Write-Output "PASS: UIA found '$($infoBarMessage.Current.Name)'; nullable state round-trip succeeded; UIA toggled '$($button.Current.Name)' and Winio observed '$($window.Current.Name)'."
             exit 0
         }
         if ($process.HasExited) {
