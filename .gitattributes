@@ -3,3 +3,5 @@
 # Generated projection/provenance are byte-compared by `mise run bindings-check`.
 crates/winio-winui-bindings/src/generated.rs text eol=lf
 crates/winio-winui-bindings/src/bindings.lock.toml text eol=lf
+crates/winio-winui-bindings/src/upstream.references.txt text eol=lf
+crates/winio-winui-bindings/src/supplemental.types.txt text eol=lf

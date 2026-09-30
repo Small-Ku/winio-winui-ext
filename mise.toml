@@ -41,6 +41,10 @@ run = "cargo run --locked -p winio-winui-bindings-tool --"
 description = "Regenerate supplemental bindings and compare with committed source"
 run = "cargo run --locked -p winio-winui-bindings-tool -- --check"
 
+[tasks.bindings-test]
+description = "Run the bounded binding inventory parser unit tests"
+run = "cargo test --locked -p winio-winui-bindings-tool"
+
 [tasks.dependency-audit]
 description = "Show duplicate dependency versions for the workspace"
 run = "cargo tree -d"

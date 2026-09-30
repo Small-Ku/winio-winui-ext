@@ -2420,6 +2420,7 @@ version = "0.0.0"
 dependencies = [
  "overrides-windows-bindgen",
  "roxmltree",
+ "serde_json",
  "sha2",
  "ureq",
  "zip",

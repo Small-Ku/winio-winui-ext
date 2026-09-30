@@ -15,11 +15,62 @@ version = "0.0.0"
 winio = { version = "0.12.0", default-features = false, features = ["winui"] }
 winio-handle = { version = "0.7.0", features = ["winui"] }
 winio_winui3 = { package = "winio-winui3", version = "=0.4.4", features = [
+  "Foundation",
+  "UI",
   "UI_Composition",
+  "UI_Composition_SystemBackdrops",
+  "UI_Dispatching",
+  "UI_Input",
+  "UI_Text",
+  "UI_Windowing",
+  "UI_Xaml",
   "UI_Xaml_Controls",
   "UI_Xaml_Controls_Primitives",
+  "UI_Xaml_Input",
+  "UI_Xaml_Interop",
+  "UI_Xaml_Markup",
+  "UI_Xaml_Media",
+  "UI_Xaml_XamlTypeInfo",
+  "Web",
+  "Web_WebView2",
+  "Web_WebView2_Core",
+  "native",
 ] }
-windows = { version = "0.62", features = ["Foundation"] }
+# Supplemental WinUI signatures reference these Windows namespaces/features;
+# derived from rustc E0433/E0425 diagnostics in generated.rs.
+windows = { version = "0.62", features = [
+  "ApplicationModel",
+  "ApplicationModel_Background",
+  "ApplicationModel_Contacts",
+  "ApplicationModel_Core",
+  "ApplicationModel_DataTransfer",
+  "ApplicationModel_DataTransfer_DragDrop",
+  "Data_Json",
+  "Devices_Geolocation",
+  "Devices_Input",
+  "Foundation",
+  "Foundation_Collections",
+  "Foundation_Numerics",
+  "Globalization",
+  "Globalization_NumberFormatting",
+  "Graphics",
+  "Graphics_Effects",
+  "Graphics_Imaging",
+  "Graphics_Printing",
+  "Media_Casting",
+  "Media_Playback",
+  "Storage",
+  "Storage_Streams",
+  "System",
+  "UI",
+  "UI_Composition",
+  "UI_Core",
+  "UI_Text",
+  "Storage_Search",
+  "Web",
+  "Web_Http",
+  "Web_Http_Headers",
+] }
 windows-core = "0.62"
 windows-collections = "0.3"
 windows-future = "0.3"

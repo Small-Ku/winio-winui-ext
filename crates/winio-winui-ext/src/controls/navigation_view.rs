@@ -49,9 +49,13 @@ impl NavigationView {
             let native_item = NavigationViewItem::new()?;
             let text = MUXC::TextBlock::new()?;
             text.SetText(&HSTRING::from(item.text.as_str()))?;
-            native_item.SetContent(&text)?;
+            native_item
+                .cast::<MUXC::ContentControl>()?
+                .SetContent(&text)?;
             let id = PropertyValue::CreateString(&HSTRING::from(item.id.as_str()))?;
-            native_item.SetTag(&id)?;
+            native_item
+                .cast::<winio_winui3::Microsoft::UI::Xaml::FrameworkElement>()?
+                .SetTag(&id)?;
             native_item.SetSelectsOnInvoked(true)?;
             menu.Append(&native_item)?;
         }
@@ -138,6 +142,10 @@ impl Component for NavigationView {
                     .as_ref()
                     .and_then(|args| args.SelectedItem().ok())
                     .and_then(|item| item.cast::<NavigationViewItem>().ok())
+                    .and_then(|item| {
+                        item.cast::<winio_winui3::Microsoft::UI::Xaml::FrameworkElement>()
+                            .ok()
+                    })
                     .and_then(|item| item.Tag().ok())
                     .and_then(|tag| tag.cast::<IPropertyValue>().ok())
                     .and_then(|tag| tag.GetString().ok())

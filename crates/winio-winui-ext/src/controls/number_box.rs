@@ -47,7 +47,7 @@ impl NumberBox {
     }
 
     pub fn set_value(&mut self, value: f64) -> Result<()> {
-        self.native.SetValue(value)?;
+        self.native.SetValue2(value)?;
         Ok(())
     }
 

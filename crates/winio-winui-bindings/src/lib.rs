@@ -4,13 +4,21 @@
 #[rustfmt::skip]
 mod generated;
 
-pub use generated::Microsoft;
+pub use generated::{Microsoft, Windows};
 
 #[cfg(test)]
 mod tests {
     #[test]
     fn shared_xaml_base_types_are_referenced() {
         let generated = include_str!("generated.rs");
+        let references: std::collections::BTreeSet<_> =
+            include_str!("upstream.references.txt").lines().collect();
+        let supplemental: std::collections::BTreeSet<_> =
+            include_str!("supplemental.types.txt").lines().collect();
+        assert!(
+            references.is_disjoint(&supplemental),
+            "upstream references and supplemental types must not overlap"
+        );
         for name in [
             "DependencyObject",
             "IDependencyObject",
@@ -66,8 +74,12 @@ mod tests {
             "winio_winui3::Microsoft::UI::Composition::IVisualElement",
             "winio_winui3::Microsoft::UI::Composition::IVisualElement2",
         ] {
+            let runtime_name = shared
+                .strip_prefix("winio_winui3::")
+                .unwrap()
+                .replace("::", ".");
             assert!(
-                generated.contains(shared),
+                references.contains(runtime_name.as_str()),
                 "missing shared reference to {shared}"
             );
         }
