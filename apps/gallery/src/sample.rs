@@ -6,6 +6,9 @@ pub enum GallerySampleMessage {
     SetBounds(Rect),
     Emit(String),
     OpenTeachingTip,
+    SourceExpanded(bool),
+    ToggleThreeState(bool),
+    NumberStepOption(bool),
 }
 
 pub struct GallerySampleInit<'a> {

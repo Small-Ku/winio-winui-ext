@@ -1,4 +1,5 @@
 mod catalog;
+mod chrome;
 mod sample;
 mod samples;
 
