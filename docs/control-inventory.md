@@ -1,42 +1,62 @@
 # WinUI control inventory (Winio 0.12 / winio-winui3 0.4.4)
 
-This inventory was checked against the public high-level widget modules in the `winio 0.12.0` crate source and the generated public `Microsoft.UI.Xaml.Controls` / `Controls.Primitives` modules in the locked `winio-winui3 0.4.4` source. It is about projection availability, not wrapper completeness or proof that every control can be hosted correctly.
+This document separates three questions that should not be conflated:
 
-## High-level Winio widgets and useful projected equivalents
+1. Is a native WinUI type already projected by locked upstream `winio-winui3 0.4.4`?
+2. Is it present in this repository's broad supplemental XAML projection from the pinned Windows App SDK metadata?
+3. Has `winio-winui-ext` designed and runtime-tested a Winio wrapper for it?
 
-| Winio 0.12 widget area | Projected native control(s) in 0.4.4 | Notes |
+Projection availability alone is not wrapper completeness or proof that every native lifecycle/API can be hosted correctly.
+
+## High-level Winio widgets and upstream projected equivalents
+
+| Winio 0.12 widget area | Native type(s) already projected by `winio-winui3 0.4.4` | Notes |
 | --- | --- | --- |
-| Button | `Button`, `Primitives::ToggleButton` | ToggleButton is the current wrapper. |
-| Check box / radio button | `CheckBox`, `RadioButton` | Projected. |
-| Combo box / list box | `ComboBox`, `ListBox` | Projected. |
-| Edit / text box / label / link label | `TextBox`, `PasswordBox`, `TextBlock`, `HyperlinkButton` | HyperlinkButton is available for a future native link wrapper. |
-| Progress / slider / scroll bar | `ProgressBar`, `Slider`, `Primitives::ScrollBar` | Projected. |
-| Scroll view / canvas / tab view | `ScrollViewer`, `Canvas`, `TabView` | Projected. |
-| View | `Canvas` as the backend's host surface | A hosting surface, not a stand-alone view equivalent. |
-| Window / media / web view / WGPU | `Xaml::Window`, `MediaPlayerElement`, `WebView2`, `SwapChainPanel` | Projected, but these have broader lifecycle or runtime integration needs. |
+| Button | `Button`, `Primitives::ToggleButton` | ToggleButton is the current upstream-backed extension wrapper. |
+| Check box / radio button | `CheckBox`, `RadioButton` | Upstream projected. |
+| Combo box / list box | `ComboBox`, `ListBox` | Upstream projected. |
+| Edit / text box / label / link label | `TextBox`, `PasswordBox`, `TextBlock`, `HyperlinkButton` | HyperlinkButton remains a possible native link wrapper. |
+| Progress / slider / scroll bar | `ProgressBar`, `Slider`, `Primitives::ScrollBar` | Upstream projected. |
+| Scroll view / canvas / tab view | `ScrollViewer`, `Canvas`, `TabView` | Upstream projected. |
+| View | `Canvas` as the backend host surface | A hosting surface, not a stand-alone view equivalent. |
+| Window / media / web view / WGPU | `Xaml::Window`, `MediaPlayerElement`, `WebView2`, `SwapChainPanel` | Upstream projected, but these have broader lifecycle/runtime integration needs. |
 
-The 0.4.4 projection also includes `ContentDialog` and `PasswordBox`. Each still needs an API and lifecycle review before becoming a Winio wrapper.
+The upstream 0.4.4 projection also contains controls such as `ContentDialog` and `PasswordBox`; each still needs a wrapper API/lifecycle review before being exposed here.
 
-## Important controls absent from the 0.4.4 projection
+## Controls absent upstream but available supplementally
 
-Checked by searching the generated public controls module; these names are not present as public control structs in the compatible projection:
+The following examples are absent as public control structs from the compatible `winio-winui3 0.4.4` projection but are present in the current broad supplemental `Microsoft.UI.Xaml` projection generated from the pinned Windows App SDK 2.5.1 metadata:
 
+- `TitleBar`
+- `InfoBar`
+- `NavigationView`
+- `NumberBox`
+- `TreeView`
 - `AutoSuggestBox`
 - `ToggleSwitch`
-- `TreeView`
 - `TeachingTip`
-- `Expander`, `FlipView`, `PersonPicture`, `CommandBar`, and `MenuBar`
-- `CalendarDatePicker`, `DatePicker`, `TimePicker`, `ColorPicker`, `RatingControl`, `SplitButton`, and `DropDownButton`
+- `Expander`
+- `FlipView`
+- `PersonPicture`
+- `CommandBar`
+- `MenuBar`
+- `CalendarDatePicker`, `DatePicker`, `TimePicker`, `ColorPicker`
+- `RatingControl`, `SplitButton`, `DropDownButton`
 
-`InfoBar` has a **supplemental canary projection** in `winio-winui-bindings`
-and a wrapper in `winio-winui-ext`; the generated surface is intentionally
-limited to the wrapper's canary properties rather than the full InfoBar API,
-and InfoBar remains absent from the upstream 0.4.4 projection.
-`NavigationView` has a minimal supplemental canary projection and a wrapper
-for menu selection, stable item identity, and pane display mode; it is not a
-full NavigationView projection. `NumberBox` now has a supplemental canary for
-value/range/small-change/spin-placement and native `ValueChanged`; it remains
-absent from upstream 0.4.4. `TreeView` and the other listed controls remain
-absent and are not wrapped in this round. See
-[supplemental bindings](supplemental-bindings.md) for provenance, deferred
-surface, and the narrow shared-type reference boundary.
+This list demonstrates supplemental projection availability; it is not a wrapper roadmap promise. The broad generator also follows required dependencies outside the root namespace where bindgen proves they are needed. It does not generate the entire Microsoft metadata universe.
+
+## Current extension wrappers
+
+| Wrapper | Projection source | Current proof |
+| --- | --- | --- |
+| `IntegratedTitleBar` | supplemental `TitleBar` + upstream XAML `Window` | Public `AsWindow + AsContainer` bridge; native custom title bar coexists with system caption buttons in UIA. |
+| `ToggleButton` | upstream `winio-winui3` | Native nullable three-state round-trip plus UIA TogglePattern event path. |
+| `InfoBar` | supplemental | Native activation/hosting and visible InfoBar message in UIA. |
+| `NavigationView` | supplemental + upstream shared bases | Stable descriptor IDs; native `SelectionChanged`; UIA selects `Details` and observes ID `details`. |
+| `NumberBox` | supplemental | Value/range/small-change/spin placement; typed `ValueChanged`; UIA RangeValue sets `42`. |
+| `TeachingTip` | supplemental | Targets an existing Winio widget; native popup close button emits typed `CloseButton` reason through `ComponentSender`. |
+| `TreeView` | supplemental | Recursive stable node descriptors; native `Expanding` and `ItemInvoked`; UIA expands root (`root`) and invokes leaf (`leaf`). |
+
+The wrapper layer remains intentionally selective even though the supplemental projection is broad. New wrappers should be driven by downstream API/lifecycle needs and should add their required-method contract plus a native runtime smoke path where practical. They should not require adding another per-control bindgen filter.
+
+See [supplemental bindings](supplemental-bindings.md) for the exact-reference partition, metadata provenance, dependency closure, sanitizer boundary, and reproducibility gates.
