@@ -253,6 +253,60 @@ const WRAPPER_CONTRACTS: &[WrapperContract] = &[
             },
         ],
     },
+    WrapperContract {
+        name: "TeachingTip",
+        runtime_type: "Microsoft.UI.Xaml.Controls.TeachingTip",
+        required_methods: &[
+            RequiredMethod {
+                type_name: "TeachingTip",
+                fragment: "pub fn Title(",
+            },
+            RequiredMethod {
+                type_name: "TeachingTip",
+                fragment: "pub fn SetTitle(",
+            },
+            RequiredMethod {
+                type_name: "TeachingTip",
+                fragment: "pub fn Subtitle(",
+            },
+            RequiredMethod {
+                type_name: "TeachingTip",
+                fragment: "pub fn SetSubtitle(",
+            },
+            RequiredMethod {
+                type_name: "TeachingTip",
+                fragment: "pub fn IsOpen(",
+            },
+            RequiredMethod {
+                type_name: "TeachingTip",
+                fragment: "pub fn SetIsOpen(",
+            },
+            RequiredMethod {
+                type_name: "TeachingTip",
+                fragment: "pub fn SetTarget<",
+            },
+            RequiredMethod {
+                type_name: "TeachingTip",
+                fragment: "pub fn SetPreferredPlacement(",
+            },
+            RequiredMethod {
+                type_name: "TeachingTip",
+                fragment: "pub fn SetCloseButtonContent<",
+            },
+            RequiredMethod {
+                type_name: "TeachingTip",
+                fragment: "pub fn Closed<",
+            },
+            RequiredMethod {
+                type_name: "TeachingTip",
+                fragment: "pub fn RemoveClosed(",
+            },
+            RequiredMethod {
+                type_name: "TeachingTipClosedEventArgs",
+                fragment: "pub fn Reason(",
+            },
+        ],
+    },
 ];
 
 #[derive(Debug)]
