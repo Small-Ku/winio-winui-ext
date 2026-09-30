@@ -200,6 +200,32 @@ const WRAPPER_CONTRACTS: &[WrapperContract] = &[
         ],
     },
     WrapperContract {
+        name: "TitleBar",
+        runtime_type: "Microsoft.UI.Xaml.Controls.TitleBar",
+        required_methods: &[
+            RequiredMethod {
+                type_name: "TitleBar",
+                fragment: "pub fn Title(",
+            },
+            RequiredMethod {
+                type_name: "TitleBar",
+                fragment: "pub fn SetTitle(",
+            },
+            RequiredMethod {
+                type_name: "TitleBar",
+                fragment: "pub fn Subtitle(",
+            },
+            RequiredMethod {
+                type_name: "TitleBar",
+                fragment: "pub fn SetSubtitle(",
+            },
+            RequiredMethod {
+                type_name: "TitleBar",
+                fragment: "pub fn new()",
+            },
+        ],
+    },
+    WrapperContract {
         name: "TreeView",
         runtime_type: "Microsoft.UI.Xaml.Controls.TreeView",
         required_methods: &[

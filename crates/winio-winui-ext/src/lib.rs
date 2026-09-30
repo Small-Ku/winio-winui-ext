@@ -6,6 +6,7 @@ mod native;
 
 mod controls {
     mod info_bar;
+    mod integrated_title_bar;
     mod navigation_view;
     mod number_box;
     mod teaching_tip;
@@ -13,6 +14,9 @@ mod controls {
     mod tree_view;
 
     pub use info_bar::{InfoBar, InfoBarMessage};
+    pub use integrated_title_bar::{
+        IntegratedTitleBar, IntegratedTitleBarInit, IntegratedTitleBarMessage,
+    };
     pub use navigation_view::{
         NavigationView, NavigationViewEvent, NavigationViewItemDescriptor, NavigationViewMessage,
     };
