@@ -1,0 +1,57 @@
+use crate::{catalog::GallerySampleKind, samples};
+use winio::prelude::*;
+
+#[derive(Debug)]
+pub enum GallerySampleMessage {
+    SetBounds(Rect),
+    Emit(String),
+    OpenTeachingTip,
+}
+
+pub struct GallerySampleInit<'a> {
+    pub parent: BorrowedContainer<'a>,
+    pub generation: u64,
+}
+
+#[derive(Debug)]
+pub enum GallerySampleEvent {
+    Output {
+        generation: u64,
+        sample_id: &'static str,
+        value: String,
+    },
+}
+
+pub type GallerySampleChild = Child<BoxComponent<GallerySampleMessage, GallerySampleEvent, Error>>;
+
+pub async fn create_sample(
+    kind: GallerySampleKind,
+    parent: BorrowedContainer<'_>,
+    generation: u64,
+) -> Result<GallerySampleChild> {
+    let init = GallerySampleInit { parent, generation };
+    Ok(match kind {
+        GallerySampleKind::Overview => Child::<samples::overview::OverviewSample>::init(init)
+            .await?
+            .into_boxed(),
+        GallerySampleKind::ToggleButton => {
+            Child::<samples::toggle_button::ToggleButtonSample>::init(init)
+                .await?
+                .into_boxed()
+        }
+        GallerySampleKind::InfoBar => Child::<samples::info_bar::InfoBarSample>::init(init)
+            .await?
+            .into_boxed(),
+        GallerySampleKind::NumberBox => Child::<samples::number_box::NumberBoxSample>::init(init)
+            .await?
+            .into_boxed(),
+        GallerySampleKind::TeachingTip => {
+            Child::<samples::teaching_tip::TeachingTipSample>::init(init)
+                .await?
+                .into_boxed()
+        }
+        GallerySampleKind::TreeView => Child::<samples::tree_view::TreeViewSample>::init(init)
+            .await?
+            .into_boxed(),
+    })
+}

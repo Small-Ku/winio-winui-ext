@@ -1,65 +1,104 @@
+mod catalog;
+mod sample;
+mod samples;
+
+use catalog::{GallerySampleKind, by_id, exact_query, navigation_items, suggestions};
+use sample::{GallerySampleChild, GallerySampleEvent, GallerySampleMessage, create_sample};
 use winio::prelude::*;
 use winio_winui_ext::{
-    AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxItemDescriptor,
-    AutoSuggestBoxTextChangeReason, InfoBar, IntegratedTitleBar, NavigationView,
-    NavigationViewEvent, NavigationViewItemDescriptor, NumberBox, NumberBoxEvent,
-    NumberBoxSpinPlacement, TeachingTip, TeachingTipCloseReason, TeachingTipEvent,
-    TeachingTipPlacement, ToggleButton, ToggleButtonEvent, TreeView, TreeViewEvent,
-    TreeViewNodeDescriptor,
+    AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxTextChangeReason, IntegratedTitleBar,
+    NavigationView, NavigationViewEvent,
 };
 
-const INFO_BAR_MESSAGE: &str = "Supplemental InfoBar canary";
-const SEARCH_ITEMS: &[(&str, &str)] = &[
-    ("toggle-button", "ToggleButton"),
-    ("info-bar", "InfoBar"),
-    ("navigation-view", "NavigationView"),
-    ("number-box", "NumberBox"),
-    ("teaching-tip", "TeachingTip"),
-    ("tree-view", "TreeView"),
-    ("title-bar", "TitleBar"),
-];
-
-fn search_suggestions(query: &str) -> Vec<AutoSuggestBoxItemDescriptor> {
-    let needle = query.trim().to_lowercase();
-    SEARCH_ITEMS
-        .iter()
-        .filter(|(_, text)| needle.is_empty() || text.to_lowercase().contains(&needle))
-        .map(|(id, text)| AutoSuggestBoxItemDescriptor::new(*id, *text))
-        .collect()
-}
+const APP_TITLE: &str = "Winio WinUI Extensions";
+const TITLE_BAR_HEIGHT: f64 = 48.0;
+const NAV_WIDTH: f64 = 300.0;
 
 struct MainModel {
     window: Child<Window>,
     title_bar: Child<IntegratedTitleBar>,
-    info_bar: Child<InfoBar>,
     navigation: Child<NavigationView>,
     search: Child<AutoSuggestBox>,
-    number: Child<NumberBox>,
-    teaching_tip: Child<TeachingTip>,
-    tree: Child<TreeView>,
-    toggle: Child<ToggleButton>,
+    sample: GallerySampleChild,
+    active_sample_id: &'static str,
+    sample_generation: u64,
+    content_bounds: Rect,
 }
 
 #[derive(Debug)]
 enum MainMessage {
     Noop,
-    ToggleStateChanged(Option<bool>),
+    Resize,
     NavigationSelected(Option<String>),
     SearchTextChanged(String),
     SearchSubmitted { query: String, id: Option<String> },
-    SearchSuggestionChosen(Option<String>),
-    NumberChanged(f64),
-    TeachingTipClosed(TeachingTipCloseReason),
-    TreeExpanded(Option<String>),
-    TreeInvoked(Option<String>),
+    SampleEvent(GallerySampleEvent),
     Close,
 }
 
-fn state_title(state: Option<bool>) -> &'static str {
-    match state {
-        Some(true) => "Winio WinUI Extensions — state: checked",
-        Some(false) => "Winio WinUI Extensions — state: unchecked",
-        None => "Winio WinUI Extensions — state: indeterminate",
+fn is_current_sample_event(
+    active_sample_id: &str,
+    active_generation: u64,
+    event_sample_id: &str,
+    event_generation: u64,
+) -> bool {
+    active_generation == event_generation && active_sample_id == event_sample_id
+}
+
+fn content_bounds(client: Size) -> Rect {
+    let left = NAV_WIDTH + 30.0;
+    let top = TITLE_BAR_HEIGHT + 64.0;
+    Rect::new(
+        Point::new(left, top),
+        Size::new(
+            (client.width - left - 20.0).max(0.0),
+            (client.height - top - 20.0).max(0.0),
+        ),
+    )
+}
+
+impl MainModel {
+    async fn route(&mut self, kind: GallerySampleKind, selected_id: &'static str) -> Result<()> {
+        let descriptor = by_id(selected_id).expect("catalog route must have a descriptor");
+        if self.active_sample_id == descriptor.id {
+            return Ok(());
+        }
+        let next_generation = self
+            .sample_generation
+            .checked_add(1)
+            .expect("gallery sample generation overflow");
+        let next = create_sample(kind, self.window.as_container(), next_generation).await?;
+        self.sample = next;
+        self.active_sample_id = descriptor.id;
+        self.sample_generation = next_generation;
+        self.sample
+            .emit(GallerySampleMessage::SetBounds(self.content_bounds))
+            .await?;
+        if self.navigation.selected_id()?.as_deref() != Some(descriptor.id) {
+            self.navigation.set_selected_id(descriptor.id)?;
+        }
+        self.window
+            .set_text(format!("{APP_TITLE} — {}", descriptor.title))?;
+        Ok(())
+    }
+
+    fn layout_shell(&mut self) -> Result<()> {
+        let client = self.window.client_size()?;
+        self.title_bar.set_loc(Point::new(0.0, 0.0))?;
+        self.title_bar
+            .set_size(Size::new(client.width.max(0.0), TITLE_BAR_HEIGHT))?;
+        let nav_size = self.navigation.size()?;
+        self.navigation
+            .set_loc(Point::new(10.0, TITLE_BAR_HEIGHT + 64.0))?;
+        self.navigation.set_size(Size::new(
+            nav_size.width.min(NAV_WIDTH),
+            (client.height - TITLE_BAR_HEIGHT - 74.0).max(0.0),
+        ))?;
+        self.search
+            .set_loc(Point::new(10.0, TITLE_BAR_HEIGHT + 10.0))?;
+        self.search
+            .set_size(Size::new(nav_size.width.min(NAV_WIDTH), 44.0))?;
+        Ok(())
     }
 }
 
@@ -69,136 +108,62 @@ impl Component for MainModel {
     type Init<'a> = ();
     type Message = MainMessage;
 
-    async fn init(_init: Self::Init<'_>, _sender: &ComponentSender<Self>) -> Result<Self> {
+    async fn init(_: Self::Init<'_>, _: &ComponentSender<Self>) -> Result<Self> {
         init! {
-            window: Window = (()) => {
-                text: "Winio WinUI Extensions",
-                size: Size::new(840.0, 600.0),
-            },
-            title_bar: IntegratedTitleBar = (&window) => {
-                size: Size::new(840.0, 48.0),
-            },
-            info_bar: InfoBar = (&window) => {
-                size: Size::new(480.0, 80.0),
-            },
-            navigation: NavigationView = (&window) => {
-                size: Size::new(300.0, 560.0),
-            },
-            search: AutoSuggestBox = (&window) => {
-                size: Size::new(300.0, 44.0),
-            },
-            number: NumberBox = (&window) => {
-                size: Size::new(260.0, 44.0),
-            },
-            teaching_tip: TeachingTip = (&window) => {
-                size: Size::new(1.0, 1.0),
-            },
-            tree: TreeView = (&window) => {
-                size: Size::new(300.0, 230.0),
-            },
-            toggle: ToggleButton = (&window) => {
-                text: "Native WinUI ToggleButton",
-                size: Size::new(260.0, 44.0),
-            },
+            window: Window = (()) => { text: APP_TITLE, size: Size::new(840.0, 600.0) },
+            title_bar: IntegratedTitleBar = (&window) => { size: Size::new(840.0, TITLE_BAR_HEIGHT) },
+            navigation: NavigationView = (&window) => { size: Size::new(NAV_WIDTH, 500.0) },
+            search: AutoSuggestBox = (&window) => { size: Size::new(NAV_WIDTH, 44.0) },
         }
-
-        title_bar.set_title("Winio WinUI Extensions")?;
+        title_bar.set_title(APP_TITLE)?;
         title_bar.set_subtitle("Native integrated WinUI title bar")?;
-        assert_eq!(title_bar.title()?, "Winio WinUI Extensions");
-        assert_eq!(title_bar.subtitle()?, "Native integrated WinUI title bar");
         assert!(title_bar.is_integrated()?);
-
         navigation.set_header_text("Gallery")?;
-        navigation.set_items(&[
-            NavigationViewItemDescriptor::new("controls", "Controls").with_children([
-                NavigationViewItemDescriptor::new("overview", "Overview"),
-                NavigationViewItemDescriptor::new("details", "Details"),
-            ]),
-            NavigationViewItemDescriptor::new("about", "About"),
-        ])?;
-        navigation
-            .set_footer_items(&[NavigationViewItemDescriptor::new("footer", "Footer canary")])?;
-        assert_eq!(navigation.selected_id()?, None);
-        assert!(!navigation.set_selected_id("missing")?);
-        search.set_placeholder_text("Search gallery canaries")?;
-        search.set_suggestions(&search_suggestions(""))?;
-        tree.set_nodes(&[TreeViewNodeDescriptor::new("root", "Root node")
-            .with_children([TreeViewNodeDescriptor::new("leaf", "Leaf node")])])?;
-
-        number.set_minimum(0.0)?;
-        number.set_maximum(100.0)?;
-        number.set_small_change(1.0)?;
-        number.set_spin_button_placement(NumberBoxSpinPlacement::Inline)?;
-        number.set_value(10.0)?;
-        assert_eq!(number.minimum()?, 0.0);
-        assert_eq!(number.maximum()?, 100.0);
-        assert_eq!(number.small_change()?, 1.0);
-        assert_eq!(number.value()?, 10.0);
-
-        toggle.set_three_state(true)?;
-        toggle.set_checked(None)?;
-        assert_eq!(toggle.is_checked()?, None);
-
-        info_bar.set_message(INFO_BAR_MESSAGE)?;
-        info_bar.set_is_closable(false)?;
-        info_bar.set_is_open(true)?;
-        assert_eq!(info_bar.message()?, INFO_BAR_MESSAGE);
-        assert!(info_bar.is_open()?);
-
-        teaching_tip.set_title("Native TeachingTip canary")?;
-        teaching_tip.set_subtitle("Popup lifecycle through Winio")?;
-        teaching_tip.set_close_button_content("Close TeachingTip")?;
-        teaching_tip.set_preferred_placement(TeachingTipPlacement::Bottom)?;
-        teaching_tip.set_target(toggle.as_widget())?;
-        assert_eq!(teaching_tip.title()?, "Native TeachingTip canary");
-        assert_eq!(teaching_tip.subtitle()?, "Popup lifecycle through Winio");
-
-        assert!(!teaching_tip.is_open()?);
+        navigation.set_items(&navigation_items())?;
+        navigation.set_footer_items(&[])?;
+        navigation.set_is_settings_visible(false)?;
+        search.set_placeholder_text("Search gallery samples")?;
+        search.set_suggestions(&suggestions(""))?;
+        let initial_generation = 0;
+        let mut sample = create_sample(
+            GallerySampleKind::Overview,
+            window.as_container(),
+            initial_generation,
+        )
+        .await?;
+        let bounds = content_bounds(window.client_size()?);
+        sample.emit(GallerySampleMessage::SetBounds(bounds)).await?;
         window.show()?;
+        window.set_text(format!("{APP_TITLE} — Overview"))?;
         Ok(Self {
             window,
             title_bar,
-            info_bar,
             navigation,
             search,
-            number,
-            teaching_tip,
-            tree,
-            toggle,
+            sample,
+            active_sample_id: "overview",
+            sample_generation: initial_generation,
+            content_bounds: bounds,
         })
     }
 
     async fn start(&mut self, sender: &ComponentSender<Self>) -> ! {
         start! {
             sender, default: MainMessage::Noop,
-            self.window => {
-                WindowEvent::Close => MainMessage::Close,
-                WindowEvent::Resize => MainMessage::Noop,
-            },
+            self.window => { WindowEvent::Close => MainMessage::Close, WindowEvent::Resize => MainMessage::Resize, },
             self.title_bar => {},
-            self.toggle => {
-                ToggleButtonEvent::StateChanged(state) => MainMessage::ToggleStateChanged(state),
-            },
-            self.info_bar => {},
             self.navigation => {
                 NavigationViewEvent::SelectionChanged { selected_id, is_settings_selected: _ } => MainMessage::NavigationSelected(selected_id),
                 NavigationViewEvent::BackRequested => MainMessage::Noop,
             },
             self.search => {
                 AutoSuggestBoxEvent::QuerySubmitted { query_text, chosen_id } => MainMessage::SearchSubmitted { query: query_text, id: chosen_id },
-                AutoSuggestBoxEvent::SuggestionChosen { id } => MainMessage::SearchSuggestionChosen(id),
+                AutoSuggestBoxEvent::SuggestionChosen { .. } => MainMessage::Noop,
                 AutoSuggestBoxEvent::TextChanged { text, reason: AutoSuggestBoxTextChangeReason::UserInput } => MainMessage::SearchTextChanged(text),
                 AutoSuggestBoxEvent::TextChanged { .. } => MainMessage::Noop,
             },
-            self.number => {
-                NumberBoxEvent::ValueChanged { old_value: _, new_value } => MainMessage::NumberChanged(new_value),
-            },
-            self.teaching_tip => {
-                TeachingTipEvent::Closed { reason } => MainMessage::TeachingTipClosed(reason),
-            },
-            self.tree => {
-                TreeViewEvent::Expanded { id } => MainMessage::TreeExpanded(id),
-                TreeViewEvent::ItemInvoked { id } => MainMessage::TreeInvoked(id),
+            self.sample => {
+                GallerySampleEvent::Output { generation, sample_id, value } => MainMessage::SampleEvent(GallerySampleEvent::Output { generation, sample_id, value }),
             },
         }
     }
@@ -207,13 +172,9 @@ impl Component for MainModel {
         update_children!(
             self.window,
             self.title_bar,
-            self.info_bar,
             self.navigation,
             self.search,
-            self.number,
-            self.teaching_tip,
-            self.tree,
-            self.toggle
+            self.sample
         )
     }
 
@@ -224,59 +185,61 @@ impl Component for MainModel {
     ) -> Result<bool> {
         match message {
             MainMessage::Noop => Ok(true),
-            MainMessage::ToggleStateChanged(state) => {
-                self.window.set_text(state_title(state))?;
-                self.teaching_tip.set_is_open(true)?;
-                Ok(false)
+            MainMessage::Resize => {
+                self.content_bounds = content_bounds(self.window.client_size()?);
+                self.sample
+                    .post(GallerySampleMessage::SetBounds(self.content_bounds));
+                self.layout_shell()?;
+                Ok(true)
             }
             MainMessage::NavigationSelected(Some(id)) => {
-                self.window
-                    .set_text(format!("Winio WinUI Extensions — navigation: {id}"))?;
+                if let Some(descriptor) = by_id(&id) {
+                    self.route(descriptor.kind, descriptor.id).await?;
+                }
                 Ok(false)
             }
             MainMessage::NavigationSelected(None) => Ok(true),
             MainMessage::SearchTextChanged(text) => {
-                let suggestions = search_suggestions(&text);
-                self.search.set_suggestions(&suggestions)?;
-                self.search
-                    .set_is_suggestion_list_open(!suggestions.is_empty())?;
+                let items = suggestions(&text);
+                self.search.set_suggestions(&items)?;
+                self.search.set_is_suggestion_list_open(!items.is_empty())?;
                 Ok(false)
             }
             MainMessage::SearchSubmitted { query, id } => {
-                let result = id.map_or_else(|| query.clone(), |id| format!("{query} ({id})"));
-                self.window.set_text(format!(
-                    "Winio WinUI Extensions — search submitted: {result}"
-                ))?;
+                let descriptor = id
+                    .as_deref()
+                    .and_then(by_id)
+                    .or_else(|| exact_query(&query));
+                if let Some(descriptor) = descriptor {
+                    self.route(descriptor.kind, descriptor.id).await?;
+                }
                 Ok(false)
             }
-            MainMessage::SearchSuggestionChosen(Some(id)) => {
-                self.window
-                    .set_text(format!("Winio WinUI Extensions — suggestion chosen: {id}"))?;
+            MainMessage::SampleEvent(GallerySampleEvent::Output {
+                generation,
+                sample_id,
+                value,
+            }) => {
+                if is_current_sample_event(
+                    self.active_sample_id,
+                    self.sample_generation,
+                    sample_id,
+                    generation,
+                ) {
+                    let title = match sample_id {
+                        "toggle-button" => format!("{APP_TITLE} — sample toggle-button: {value}"),
+                        "number-box" => format!("{APP_TITLE} — sample number-box: {value}"),
+                        "info-bar" => format!("{APP_TITLE} — sample info-bar: {value}"),
+                        "teaching-tip" => {
+                            format!("{APP_TITLE} — teaching tip {}", value.replace(':', " "))
+                        }
+                        "tree-view" => format!("{APP_TITLE} — tree {value}"),
+                        _ => format!("{APP_TITLE} — sample {sample_id}: {value}"),
+                    };
+                    self.window.set_text(title)?;
+                }
                 Ok(false)
             }
-            MainMessage::SearchSuggestionChosen(None) => Ok(true),
-            MainMessage::NumberChanged(new_value) => {
-                self.window
-                    .set_text(format!("Winio WinUI Extensions — number: {new_value}"))?;
-                Ok(false)
-            }
-            MainMessage::TeachingTipClosed(reason) => {
-                self.window.set_text(format!(
-                    "Winio WinUI Extensions — teaching tip closed: {reason:?}"
-                ))?;
-                Ok(false)
-            }
-            MainMessage::TreeExpanded(Some(id)) => {
-                self.window
-                    .set_text(format!("Winio WinUI Extensions — tree expanded: {id}"))?;
-                Ok(false)
-            }
-            MainMessage::TreeInvoked(Some(id)) => {
-                self.window
-                    .set_text(format!("Winio WinUI Extensions — tree invoked: {id}"))?;
-                Ok(false)
-            }
-            MainMessage::TreeExpanded(None) | MainMessage::TreeInvoked(None) => Ok(true),
             MainMessage::Close => {
                 sender.output(());
                 Ok(false)
@@ -284,50 +247,16 @@ impl Component for MainModel {
         }
     }
 
-    fn render(&mut self, _sender: &ComponentSender<Self>) -> Result<()> {
-        let client = self.window.client_size()?;
-        let title_bar_height = 48.0;
-        self.title_bar.set_loc(Point::new(0.0, 0.0))?;
-        self.title_bar
-            .set_size(Size::new(client.width.max(0.0), title_bar_height))?;
-
-        let nav_size = self.navigation.size()?;
-        self.navigation
-            .set_loc(Point::new(10.0, title_bar_height + 64.0))?;
-        self.navigation.set_size(Size::new(
-            nav_size.width.min(300.0),
-            (client.height - title_bar_height - 74.0).max(0.0),
-        ))?;
-        self.search
-            .set_loc(Point::new(10.0, title_bar_height + 10.0))?;
-        self.search
-            .set_size(Size::new(nav_size.width.min(300.0), 44.0))?;
-        let info_bar_left = 330.0;
-        let info_bar_top = title_bar_height + 18.0;
-        let info_bar_width = (client.width - info_bar_left - 20.0).max(0.0);
-        self.info_bar
-            .set_loc(Point::new(info_bar_left, info_bar_top))?;
-        self.info_bar.set_size(Size::new(info_bar_width, 82.0))?;
-        self.toggle
-            .set_loc(Point::new(440.0, title_bar_height + 150.0))?;
-        self.number
-            .set_loc(Point::new(440.0, title_bar_height + 220.0))?;
-        self.teaching_tip.set_loc(Point::new(0.0, 0.0))?;
-        self.tree
-            .set_loc(Point::new(420.0, title_bar_height + 290.0))?;
-        Ok(())
+    fn render(&mut self, _: &ComponentSender<Self>) -> Result<()> {
+        self.layout_shell()
     }
 
     fn render_children(&mut self) -> Result<()> {
         self.window.render()?;
         self.title_bar.render()?;
-        self.info_bar.render()?;
         self.navigation.render()?;
         self.search.render()?;
-        self.number.render()?;
-        self.teaching_tip.render()?;
-        self.tree.render()?;
-        self.toggle.render()
+        self.sample.render()
     }
 }
 
@@ -343,13 +272,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn search_filter_preserves_stable_ids() {
-        let all = search_suggestions("");
-        assert_eq!(all.len(), SEARCH_ITEMS.len());
-
-        let tree = search_suggestions("tree");
-        assert_eq!(tree.len(), 1);
-        assert_eq!(tree[0].id, "tree-view");
-        assert_eq!(tree[0].text, "TreeView");
+    fn stale_sample_outputs_are_rejected_by_generation_and_identity() {
+        assert!(is_current_sample_event("number-box", 4, "number-box", 4));
+        assert!(!is_current_sample_event("number-box", 4, "number-box", 3));
+        assert!(!is_current_sample_event("number-box", 4, "tree-view", 4));
     }
 }
