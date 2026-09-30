@@ -39,6 +39,10 @@ try {
     $detailsCond = [System.Windows.Automation.AndCondition]::new(
         [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem),
         [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, 'Details'))
+    $controlsCond = [System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem),
+        [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::NameProperty, 'Controls'))
+    $searchCond = [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ClassNameProperty, 'AutoSuggestBox')
     $numberCond = [System.Windows.Automation.AndCondition]::new(
         [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Spinner),
         [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.NumberBox'))
@@ -70,6 +74,8 @@ try {
             $button = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $buttonCond)
             $info = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $infoCond)
             $details = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $detailsCond)
+            $controls = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $controlsCond)
+            $search = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $searchCond)
             $number = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $numberCond)
             $treeRoot = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $treeCond)
             $titleBar = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $titleBarCond)
@@ -77,7 +83,7 @@ try {
         }
         $tipPopup = [System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $tipPopupCond)
         $tipClose = [System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $tipCloseCond)
-        if ($null -ne $button -and $null -ne $info -and $null -ne $details -and $null -ne $number -and
+        if ($null -ne $button -and $null -ne $info -and $null -ne $controls -and $null -ne $search -and $null -ne $number -and
             $null -ne $treeRoot -and $null -ne $titleBar -and $null -ne $captionClose -and
             $null -ne $tipPopup -and $null -ne $tipClose) { break }
         Start-Sleep -Milliseconds 150
@@ -85,7 +91,15 @@ try {
 
     if ($null -eq $button) { throw 'ToggleButton not found.' }
     if ($null -eq $info) { throw 'InfoBar message not found.' }
-    if ($null -eq $details) { throw 'NavigationView Details item not found.' }
+    if ($null -eq $controls) { throw 'NavigationView nested Controls item not found.' }
+    if ($null -eq $search) { throw 'Native AutoSuggestBox not found.' }
+
+    $controlsExpand = [System.Windows.Automation.ExpandCollapsePattern]$controls.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+    if ($controlsExpand.Current.ExpandCollapseState -eq [System.Windows.Automation.ExpandCollapseState]::Collapsed) {
+        $controlsExpand.Expand()
+    }
+    $details = $window.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $detailsCond)
+    if ($null -eq $details) { throw 'Nested NavigationView Details item was not exposed after expanding Controls.' }
     if ($null -eq $number) { throw 'NumberBox not found.' }
     if ($null -eq $treeRoot) { throw 'TreeView root not found.' }
     if ($null -eq $titleBar) { throw 'Integrated native TitleBar not found.' }
@@ -123,6 +137,16 @@ try {
     $navTitle = 'Winio WinUI Extensions — navigation: details'
     $window = Wait-MainTitle $process $pc $navTitle
 
+    $searchInput = $search.FindFirst([System.Windows.Automation.TreeScope]::Descendants,
+        [System.Windows.Automation.PropertyCondition]::new([System.Windows.Automation.AutomationElement]::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit))
+    if ($null -eq $searchInput) { throw 'AutoSuggestBox edit field not found.' }
+    ([System.Windows.Automation.ValuePattern]$searchInput.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)).SetValue('TreeView')
+    $searchInvoke = [System.Windows.Automation.InvokePattern]$search.GetCurrentPattern(
+        [System.Windows.Automation.InvokePattern]::Pattern)
+    $searchInvoke.Invoke()
+    $searchTitle = 'Winio WinUI Extensions — search submitted: TreeView'
+    $window = Wait-MainTitle $process $pc $searchTitle
+
     $range.SetValue(42)
     $numberTitle = 'Winio WinUI Extensions — number: 42'
     $window = Wait-MainTitle $process $pc $numberTitle
@@ -136,7 +160,7 @@ try {
     $treeInvokedTitle = 'Winio WinUI Extensions — tree invoked: leaf'
     $window = Wait-MainTitle $process $pc $treeInvokedTitle
 
-    Write-Output "PASS: integrated native TitleBar '$($titleBar.Current.Name)' coexists with system caption controls; TeachingTip closed through native popup with '$tipTitle'; InfoBar visible; NumberBox metadata and value event passed; ToggleButton observed '$toggleTitle'; NavigationView observed '$navTitle'; TreeView observed '$treeExpandedTitle' then '$treeInvokedTitle'."
+    Write-Output "PASS: integrated native TitleBar '$($titleBar.Current.Name)' coexists with system caption controls; TeachingTip closed through native popup with '$tipTitle'; InfoBar visible; NumberBox metadata and value event passed; ToggleButton observed '$toggleTitle'; nested NavigationView selected child and observed '$navTitle'; AutoSuggestBox QuerySubmitted observed '$searchTitle'; TreeView observed '$treeExpandedTitle' then '$treeInvokedTitle'."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

@@ -30,7 +30,7 @@ The generator enforces these invariants:
 - upstream references and all locally generated types are disjoint;
 - no ordinary `Windows.*` type is generated locally, with `Windows.UI.Xaml.Interop` being the intentional exception;
 - the sanitizer must not change the generated type inventory;
-- wrapper contracts assert the runtime types and methods required by InfoBar, NavigationView, NumberBox, TeachingTip, and TreeView.
+- wrapper contracts assert the runtime types and methods required by AutoSuggestBox, InfoBar, NavigationView, NumberBox, TeachingTip, and TreeView.
 
 The generated manifests make that boundary reviewable. `upstream.references.txt` records every exact upstream type used by the final projection; `supplemental.types.txt` records every locally generated type; and `bindings.lock.toml` records counts, hashes, sanitizer statistics, and the final warning count.
 
@@ -78,8 +78,9 @@ The broad projection is intentionally larger than the wrapper layer. A type appe
 The current wrapper contracts cover:
 
 - TitleBar: title/subtitle plus native activation for `Window.SetTitleBar`;
+- AutoSuggestBox: text/placeholder/suggestion-list state, text/suggestion/query events, and event-argument accessors;
 - InfoBar: message/open/closable properties;
-- NavigationView: menu items, selection, pane state, and `SelectionChanged`;
+- NavigationView: recursive main/footer menu items, selection, settings/pane/header state, pane display mode, `SelectionChanged`, and `BackRequested`;
 - NumberBox: value/range/small-change/spin placement and `ValueChanged` old/new values;
 - TeachingTip: title/subtitle/open state, target, preferred placement, close-button content, and native `Closed` reason;
 - TreeView: root nodes, selection mode, node content/children, `Expanding`, and `ItemInvoked`.
@@ -88,12 +89,15 @@ The Gallery UI Automation smoke test proves these controls are native and that t
 
 - the native `Microsoft.UI.Xaml.Controls.TitleBar` is registered as the integrated window title bar while system caption controls remain present;
 - the InfoBar canary is visible in the native UIA tree;
+- AutoSuggestBox accepts the native UIA query `TreeView`, submits it, and returns the query through `ComponentSender` into the Winio-owned window title;
 - ToggleButton changes native toggle state and updates the Winio-owned window title;
-- NavigationView selects `Details` through `SelectionItemPattern` and emits the stable `details` ID;
+- NavigationView selects nested `Details` through `SelectionItemPattern` and emits the stable `details` ID;
 - NumberBox exposes the expected `RangeValuePattern`, accepts `42`, and emits that value;
 - TeachingTip opens as a native popup targeted at the ToggleButton, closes through its UIA close-button `InvokePattern`, disappears from the UIA tree, and emits `CloseButton`;
 - TreeView expands the root through `ExpandCollapsePattern` and emits stable ID `root`;
 - TreeView invokes the leaf through `InvokePattern` and emits stable ID `leaf`.
+
+The Gallery keeps AutoSuggestBox as an independent Winio Canvas child instead of assigning it to `NavigationView.AutoSuggestBox`. `NativeElement` already attaches the wrapper's native control to the Canvas; reparenting the same control into NavigationView would make its native parent and Winio ownership disagree. M1 verifies standalone search and leaves embedded NavigationView search for a future ownership design.
 
 WinUI's content-mode `TreeViewItemAutomationPeer` currently exposes a generic automation name (`Microsoft.UI.Xaml.Controls.TreeViewNode`) for these canary nodes, so the smoke test identifies the native TreeView container by control type/class and verifies stable identity through the wrapper event result instead of claiming a stable node-name automation contract.
 

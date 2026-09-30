@@ -1,18 +1,39 @@
 use winio::prelude::*;
 use winio_winui_ext::{
-    InfoBar, IntegratedTitleBar, NavigationView, NavigationViewEvent, NavigationViewItemDescriptor,
-    NumberBox, NumberBoxEvent, NumberBoxSpinPlacement, TeachingTip, TeachingTipCloseReason,
-    TeachingTipEvent, TeachingTipPlacement, ToggleButton, ToggleButtonEvent, TreeView,
-    TreeViewEvent, TreeViewNodeDescriptor,
+    AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxItemDescriptor,
+    AutoSuggestBoxTextChangeReason, InfoBar, IntegratedTitleBar, NavigationView,
+    NavigationViewEvent, NavigationViewItemDescriptor, NumberBox, NumberBoxEvent,
+    NumberBoxSpinPlacement, TeachingTip, TeachingTipCloseReason, TeachingTipEvent,
+    TeachingTipPlacement, ToggleButton, ToggleButtonEvent, TreeView, TreeViewEvent,
+    TreeViewNodeDescriptor,
 };
 
 const INFO_BAR_MESSAGE: &str = "Supplemental InfoBar canary";
+const SEARCH_ITEMS: &[(&str, &str)] = &[
+    ("toggle-button", "ToggleButton"),
+    ("info-bar", "InfoBar"),
+    ("navigation-view", "NavigationView"),
+    ("number-box", "NumberBox"),
+    ("teaching-tip", "TeachingTip"),
+    ("tree-view", "TreeView"),
+    ("title-bar", "TitleBar"),
+];
+
+fn search_suggestions(query: &str) -> Vec<AutoSuggestBoxItemDescriptor> {
+    let needle = query.trim().to_lowercase();
+    SEARCH_ITEMS
+        .iter()
+        .filter(|(_, text)| needle.is_empty() || text.to_lowercase().contains(&needle))
+        .map(|(id, text)| AutoSuggestBoxItemDescriptor::new(*id, *text))
+        .collect()
+}
 
 struct MainModel {
     window: Child<Window>,
     title_bar: Child<IntegratedTitleBar>,
     info_bar: Child<InfoBar>,
     navigation: Child<NavigationView>,
+    search: Child<AutoSuggestBox>,
     number: Child<NumberBox>,
     teaching_tip: Child<TeachingTip>,
     tree: Child<TreeView>,
@@ -24,6 +45,9 @@ enum MainMessage {
     Noop,
     ToggleStateChanged(Option<bool>),
     NavigationSelected(Option<String>),
+    SearchTextChanged(String),
+    SearchSubmitted { query: String, id: Option<String> },
+    SearchSuggestionChosen(Option<String>),
     NumberChanged(f64),
     TeachingTipClosed(TeachingTipCloseReason),
     TreeExpanded(Option<String>),
@@ -60,6 +84,9 @@ impl Component for MainModel {
             navigation: NavigationView = (&window) => {
                 size: Size::new(300.0, 560.0),
             },
+            search: AutoSuggestBox = (&window) => {
+                size: Size::new(300.0, 44.0),
+            },
             number: NumberBox = (&window) => {
                 size: Size::new(260.0, 44.0),
             },
@@ -81,10 +108,20 @@ impl Component for MainModel {
         assert_eq!(title_bar.subtitle()?, "Native integrated WinUI title bar");
         assert!(title_bar.is_integrated()?);
 
+        navigation.set_header_text("Gallery")?;
         navigation.set_items(&[
-            NavigationViewItemDescriptor::new("overview", "Overview"),
-            NavigationViewItemDescriptor::new("details", "Details"),
+            NavigationViewItemDescriptor::new("controls", "Controls").with_children([
+                NavigationViewItemDescriptor::new("overview", "Overview"),
+                NavigationViewItemDescriptor::new("details", "Details"),
+            ]),
+            NavigationViewItemDescriptor::new("about", "About"),
         ])?;
+        navigation
+            .set_footer_items(&[NavigationViewItemDescriptor::new("footer", "Footer canary")])?;
+        assert_eq!(navigation.selected_id()?, None);
+        assert!(!navigation.set_selected_id("missing")?);
+        search.set_placeholder_text("Search gallery canaries")?;
+        search.set_suggestions(&search_suggestions(""))?;
         tree.set_nodes(&[TreeViewNodeDescriptor::new("root", "Root node")
             .with_children([TreeViewNodeDescriptor::new("leaf", "Leaf node")])])?;
 
@@ -123,6 +160,7 @@ impl Component for MainModel {
             title_bar,
             info_bar,
             navigation,
+            search,
             number,
             teaching_tip,
             tree,
@@ -143,8 +181,14 @@ impl Component for MainModel {
             },
             self.info_bar => {},
             self.navigation => {
-                NavigationViewEvent::SelectionChanged { selected_id, .. } => MainMessage::NavigationSelected(selected_id),
+                NavigationViewEvent::SelectionChanged { selected_id, is_settings_selected: _ } => MainMessage::NavigationSelected(selected_id),
                 NavigationViewEvent::BackRequested => MainMessage::Noop,
+            },
+            self.search => {
+                AutoSuggestBoxEvent::QuerySubmitted { query_text, chosen_id } => MainMessage::SearchSubmitted { query: query_text, id: chosen_id },
+                AutoSuggestBoxEvent::SuggestionChosen { id } => MainMessage::SearchSuggestionChosen(id),
+                AutoSuggestBoxEvent::TextChanged { text, reason: AutoSuggestBoxTextChangeReason::UserInput } => MainMessage::SearchTextChanged(text),
+                AutoSuggestBoxEvent::TextChanged { .. } => MainMessage::Noop,
             },
             self.number => {
                 NumberBoxEvent::ValueChanged { old_value: _, new_value } => MainMessage::NumberChanged(new_value),
@@ -165,6 +209,7 @@ impl Component for MainModel {
             self.title_bar,
             self.info_bar,
             self.navigation,
+            self.search,
             self.number,
             self.teaching_tip,
             self.tree,
@@ -190,6 +235,26 @@ impl Component for MainModel {
                 Ok(false)
             }
             MainMessage::NavigationSelected(None) => Ok(true),
+            MainMessage::SearchTextChanged(text) => {
+                let suggestions = search_suggestions(&text);
+                self.search.set_suggestions(&suggestions)?;
+                self.search
+                    .set_is_suggestion_list_open(!suggestions.is_empty())?;
+                Ok(false)
+            }
+            MainMessage::SearchSubmitted { query, id } => {
+                let result = id.map_or_else(|| query.clone(), |id| format!("{query} ({id})"));
+                self.window.set_text(format!(
+                    "Winio WinUI Extensions — search submitted: {result}"
+                ))?;
+                Ok(false)
+            }
+            MainMessage::SearchSuggestionChosen(Some(id)) => {
+                self.window
+                    .set_text(format!("Winio WinUI Extensions — suggestion chosen: {id}"))?;
+                Ok(false)
+            }
+            MainMessage::SearchSuggestionChosen(None) => Ok(true),
             MainMessage::NumberChanged(new_value) => {
                 self.window
                     .set_text(format!("Winio WinUI Extensions — number: {new_value}"))?;
@@ -228,11 +293,15 @@ impl Component for MainModel {
 
         let nav_size = self.navigation.size()?;
         self.navigation
-            .set_loc(Point::new(10.0, title_bar_height + 10.0))?;
+            .set_loc(Point::new(10.0, title_bar_height + 64.0))?;
         self.navigation.set_size(Size::new(
             nav_size.width.min(300.0),
-            (client.height - title_bar_height - 20.0).max(0.0),
+            (client.height - title_bar_height - 74.0).max(0.0),
         ))?;
+        self.search
+            .set_loc(Point::new(10.0, title_bar_height + 10.0))?;
+        self.search
+            .set_size(Size::new(nav_size.width.min(300.0), 44.0))?;
         let info_bar_left = 330.0;
         let info_bar_top = title_bar_height + 18.0;
         let info_bar_width = (client.width - info_bar_left - 20.0).max(0.0);
@@ -254,6 +323,7 @@ impl Component for MainModel {
         self.title_bar.render()?;
         self.info_bar.render()?;
         self.navigation.render()?;
+        self.search.render()?;
         self.number.render()?;
         self.teaching_tip.render()?;
         self.tree.render()?;
@@ -266,4 +336,20 @@ fn main() -> Result<()> {
         .name("de.kwoo.winio-winui-ext.gallery")
         .build()?
         .block_on(MainModel::run_until_event(()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_filter_preserves_stable_ids() {
+        let all = search_suggestions("");
+        assert_eq!(all.len(), SEARCH_ITEMS.len());
+
+        let tree = search_suggestions("tree");
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].id, "tree-view");
+        assert_eq!(tree[0].text, "TreeView");
+    }
 }
