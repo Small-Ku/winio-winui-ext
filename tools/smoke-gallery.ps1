@@ -77,37 +77,60 @@ function Wait-ShellTitle($Window, [string]$Name) {
     if ($null -eq $chosen) { throw "Could not find fixed shell title '$Name'." }
     return $chosen
 }
-function Wait-ScrollViewer($Window) {
-    $condition = [System.Windows.Automation.AndCondition]::new(
-        (TypeCondition ([System.Windows.Automation.ControlType]::Pane)),
-        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'ScrollViewer'))
-    $viewers = $Window.FindAll($descendants, $condition)
-    $chosen = $null
-    for ($i = 0; $i -lt $viewers.Count; $i++) {
-        $candidate = $viewers.Item($i)
-        if (-not $candidate.Current.IsOffscreen -and ($null -eq $chosen -or $candidate.Current.BoundingRectangle.Top -gt $chosen.Current.BoundingRectangle.Top)) {
-            $chosen = $candidate
-        }
-    }
-    if ($null -eq $chosen) { throw 'Timed out finding routed sample ScrollViewer.' }
-    return $chosen
-}
-function Get-ScrollViewers($Window) {
+function Get-PageScrollViewers($Window) {
     $condition = [System.Windows.Automation.AndCondition]::new(
         (TypeCondition ([System.Windows.Automation.ControlType]::Pane)),
         [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'ScrollViewer'))
     $all = $Window.FindAll($descendants, $condition)
     $pane = $Window.FindFirst($descendants, [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'PaneRoot'))
     $pageLeft = if ($null -eq $pane) { 0 } else { $pane.Current.BoundingRectangle.Right - 4 }
-    $matches = [System.Collections.Generic.List[System.Windows.Automation.AutomationElement]]::new()
+    $candidates = [System.Collections.Generic.List[System.Windows.Automation.AutomationElement]]::new()
+    $top = [double]::PositiveInfinity
     for ($i = 0; $i -lt $all.Count; $i++) {
         $candidate = $all.Item($i)
-        if (-not $candidate.Current.IsOffscreen -and $candidate.Current.BoundingRectangle.Left -ge $pageLeft -and $candidate.Current.BoundingRectangle.Top -gt 100) { $matches.Add($candidate) }
+        $rect = $candidate.Current.BoundingRectangle
+        if (-not $candidate.Current.IsOffscreen -and $rect.Left -ge $pageLeft -and $rect.Top -gt 100 -and $rect.Height -gt 150) {
+            $candidates.Add($candidate)
+            $top = [Math]::Min($top, $rect.Top)
+        }
+    }
+    if ($candidates.Count -eq 0) { return @() }
+    $matches = [System.Collections.Generic.List[System.Windows.Automation.AutomationElement]]::new()
+    foreach ($candidate in $candidates) {
+        if ([Math]::Abs($candidate.Current.BoundingRectangle.Top - $top) -le 4) { $matches.Add($candidate) }
     }
     return ,$matches.ToArray()
 }
+function Wait-ScrollViewer($Window) {
+    $deadline = [DateTime]::UtcNow.AddSeconds(8)
+    do {
+        $viewers = Get-PageScrollViewers $Window
+        if ($viewers.Count -gt 0) { return $viewers[0] }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw 'Timed out finding routed page ScrollViewer.'
+}
 function Wait-CardSourceToggle($Window, [string]$CardName) {
     return Wait-Element $Window (Condition ([System.Windows.Automation.ControlType]::Button) "Source code — $CardName") "Source code toggle for $CardName"
+}
+function Wait-SourceViewer($Window, [string]$CardName) {
+    $condition = Condition ([System.Windows.Automation.ControlType]::Edit) "Source code viewer — $CardName"
+    $deadline = [DateTime]::UtcNow.AddSeconds(8)
+    do {
+        $viewer = $Window.FindFirst($descendants, $condition)
+        if ($null -ne $viewer) { return $viewer }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw "Timed out finding source viewer for $CardName."
+}
+function Wait-SourceViewerVisible($Window, [string]$CardName) {
+    $deadline = [DateTime]::UtcNow.AddSeconds(8)
+    do {
+        $viewer = Wait-SourceViewer $Window $CardName
+        if (-not $viewer.Current.IsOffscreen -and $viewer.Current.BoundingRectangle.Height -gt 1) { return $viewer }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw "Source viewer for $CardName did not enter the visible viewport."
 }
 function Get-ScrollContentTop($Element, $ScrollViewer) {
     $scroll = [System.Windows.Automation.ScrollPattern]$ScrollViewer.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
@@ -119,19 +142,40 @@ function Get-ScrollContentTop($Element, $ScrollViewer) {
     $offset = $percent / 100 * [Math]::Max(0, $extent - $viewport.Height)
     return $Element.Current.BoundingRectangle.Top - $viewport.Top + $offset
 }
-function Find-SourceMarker($Window, [string]$Marker) {
-    $texts = $Window.FindAll($descendants, (TypeCondition ([System.Windows.Automation.ControlType]::Text)))
-    for ($i = 0; $i -lt $texts.Count; $i++) {
-        $element = $texts.Item($i)
-        if ($element.Current.Name.Contains($Marker)) { return $element }
-        try {
-            $textPattern = [System.Windows.Automation.TextPattern]$element.GetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern)
-            if ($textPattern.DocumentRange.GetText(20000).Contains($Marker)) { return $element }
-        } catch { }
+function Assert-SourceViewerContract($SourceViewer, [string]$Marker) {
+    $rect = $SourceViewer.Current.BoundingRectangle
+    if ($rect.Height -lt 250 -or $rect.Height -gt 500) {
+        throw "Visible source viewer is outside the bounded code-area height range: $rect."
     }
-    return $null
-}
-function Select-NavigationSample($Window, [string]$Section, [string]$Sample) {
+    $value = [System.Windows.Automation.ValuePattern]$SourceViewer.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    if (-not $value.Current.IsReadOnly) { throw 'Source viewer is editable instead of read-only.' }
+    $setSucceeded = $false
+    try {
+        $value.SetValue('should-not-be-editable')
+        $setSucceeded = $true
+    } catch { }
+    if ($setSucceeded) { throw 'Read-only source viewer accepted a UIA SetValue mutation.' }
+
+    $text = [System.Windows.Automation.TextPattern]$SourceViewer.GetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern)
+    $documentText = $text.DocumentRange.GetText(-1)
+    if (-not $documentText.Contains($Marker)) { throw "Source viewer text does not contain marker '$Marker'." }
+    $selectionRange = $text.DocumentRange.Clone()
+    $selectionRange.MoveEndpointByRange(
+        [System.Windows.Automation.Text.TextPatternRangeEndpoint]::End,
+        $selectionRange,
+        [System.Windows.Automation.Text.TextPatternRangeEndpoint]::Start)
+    [void]$selectionRange.MoveEndpointByUnit(
+        [System.Windows.Automation.Text.TextPatternRangeEndpoint]::End,
+        [System.Windows.Automation.Text.TextUnit]::Character,
+        12)
+    $selectionRange.Select()
+    $selection = $text.GetSelection()
+    if ($selection.Length -lt 1 -or [string]::IsNullOrEmpty($selection[0].GetText(-1))) {
+        throw 'Source viewer text could not be selected.'
+    }
+
+
+}function Select-NavigationSample($Window, [string]$Section, [string]$Sample) {
     $sectionElement = Wait-Element $Window (Condition ([System.Windows.Automation.ControlType]::ListItem) $Section) "NavigationView section '$Section'"
     $expand = [System.Windows.Automation.ExpandCollapsePattern]$sectionElement.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
     if ($expand.Current.ExpandCollapseState -eq [System.Windows.Automation.ExpandCollapseState]::Collapsed) { $expand.Expand() }
@@ -238,7 +282,7 @@ try {
     $window = Wait-MainWindow $process $pc
     Select-NavigationSample $window 'Basic input' 'ToggleButton'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ToggleButton'
-    $scrollViewers = Get-ScrollViewers $window
+    $scrollViewers = Get-PageScrollViewers $window
     if ($scrollViewers.Count -ne 1) { throw "ToggleButton route must expose exactly one page ScrollViewer; found $($scrollViewers.Count)." }
     $toggle = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Three-state sample') 'three-state ToggleButton example'
     $basicToggle = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample') 'basic ToggleButton example'
@@ -287,15 +331,16 @@ try {
     if ($collapsedScrollPattern.Current.VerticallyScrollable) { $collapsedScrollPattern.SetScrollPercent(-1, 0) }
     $sourcePattern.Toggle()
     $sourceToggle = Wait-CardSourceToggle $window 'ToggleButton — three-state'
-    $deadline = [DateTime]::UtcNow.AddSeconds(8)
-    do {
-        $sourceMarker = Find-SourceMarker $window 'skip_initial_event'
-        if ($null -ne $sourceMarker) { break }
-        Start-Sleep -Milliseconds 100
-    } while ([DateTime]::UtcNow -lt $deadline)
-    if ($null -eq $sourceMarker) { throw 'Expanded Rust source did not expose its skip_initial_event marker.' }
+    $sourceViewer = Wait-SourceViewer $window 'ToggleButton — three-state'
+    $sourceValue = [System.Windows.Automation.ValuePattern]$sourceViewer.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    if (-not $sourceValue.Current.IsReadOnly) { throw 'Expanded source viewer is editable instead of read-only.' }
     $sampleScroll = Wait-ScrollViewer $window
-    if ((Get-ScrollViewers $window).Count -ne 1) { throw 'Source expansion created a card-local ScrollViewer.' }
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'Source expansion created a second page-level ScrollViewer.' }
+    $scrollPattern = [System.Windows.Automation.ScrollPattern]$sampleScroll.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
+    if ($scrollPattern.Current.VerticallyScrollable) { $scrollPattern.SetScrollPercent(-1, 45) }
+    $sourceViewer = Wait-SourceViewerVisible $window 'ToggleButton — three-state'
+    Assert-SourceViewerContract $sourceViewer 'skip_initial_event'
+    if ($scrollPattern.Current.VerticallyScrollable) { $scrollPattern.SetScrollPercent(-1, 0) }
     $basicHeading = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample') 'basic ToggleButton after Card A source expansion'
     $scrollPattern = [System.Windows.Automation.ScrollPattern]$sampleScroll.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
     if ($scrollPattern.Current.HorizontallyScrollable) { throw 'The routed sample ScrollViewer enabled horizontal scrolling.' }
@@ -371,7 +416,10 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -eq $expandedBasicExtent) { throw "Card B source expansion did not independently change page scroll extent: collapsed view=$collapsedExtent current view=$($scrollPattern.Current.VerticalViewSize)." }
     if (([System.Windows.Automation.TogglePattern]$sourceToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'Card B source toggle changed Card A state.' }
-    if ($null -eq (Find-SourceMarker $window 'skip_initial_event')) { throw 'Card B source expansion did not reveal the compiled Rust source.' }
+    $basicSourceViewer = Wait-SourceViewer $window 'ToggleButton — basic'
+    $basicValue = [System.Windows.Automation.ValuePattern]$basicSourceViewer.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    $basicText = [System.Windows.Automation.TextPattern]$basicSourceViewer.GetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern)
+    if (-not $basicValue.Current.IsReadOnly -or -not $basicText.DocumentRange.GetText(-1).Contains('skip_initial_event')) { throw 'Card B source viewer did not expose the read-only compiled Rust source.' }
     ([System.Windows.Automation.TogglePattern]$basicSourceToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
     $deadline = [DateTime]::UtcNow.AddSeconds(8)
     do {
@@ -432,7 +480,7 @@ try {
 
     Select-NavigationSample $window 'Basic input' 'ToggleButton'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ToggleButton'
-    if ((Get-ScrollViewers $window).Count -ne 1) { throw 'Narrow ToggleButton route did not keep one page ScrollViewer.' }
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'Narrow ToggleButton route did not keep one page ScrollViewer.' }
     $narrowThree = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Three-state sample') 'narrow three-state example'
     $narrowBasic = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample') 'narrow basic example'
     $narrowOption = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Three-state: On') 'narrow ToggleButton option'
@@ -508,7 +556,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; collapsed, expanded, scrollable, and recollapsed Rust source; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; InfoBar; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; InfoBar; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

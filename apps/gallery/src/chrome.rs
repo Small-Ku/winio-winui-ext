@@ -1,6 +1,8 @@
 use windows::core::{HSTRING, Interface};
 use winio::prelude::*;
-use winio_winui_bindings::Microsoft::UI::Xaml::{Controls::Border, CornerRadius};
+use winio_winui_bindings::Microsoft::UI::Xaml::{
+    Automation::AutomationProperties, Controls::Border, CornerRadius,
+};
 use winio_winui_ext::ToggleButton;
 use winio_winui3::Microsoft::UI::Xaml::{self as MUX, Controls as MUXC};
 
@@ -8,6 +10,7 @@ const PAGE_MAX_WIDTH: f64 = 1064.0;
 const CARD_PADDING: f64 = 12.0;
 const CARD_GAP: f64 = 16.0;
 const NARROW_BREAKPOINT: f64 = 820.0;
+const SOURCE_VIEWER_HEIGHT: f64 = 360.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct CardId(&'static str);
@@ -39,7 +42,6 @@ impl CardLayout {
         has_output: bool,
         has_options: bool,
         source_expanded: bool,
-        source_chars: usize,
     ) -> Self {
         let width = viewport_width.clamp(0.0, PAGE_MAX_WIDTH);
         let inner = (width - 2.0 * CARD_PADDING).max(0.0);
@@ -98,14 +100,9 @@ impl CardLayout {
             Size::new(inner, 40.0),
         );
         let source = source_expanded.then(|| {
-            let chars_per_line = (inner / 8.0).max(16.0) as usize;
-            let lines = source_chars
-                .div_ceil(chars_per_line)
-                .max(source_chars.div_ceil(80))
-                .max(1);
             Rect::new(
                 Point::new(CARD_PADDING, source_toggle.max_y() + 8.0),
-                Size::new(inner, (lines as f64 * 18.0 + 28.0).max(64.0)),
+                Size::new(inner, SOURCE_VIEWER_HEIGHT),
             )
         });
         let content_height = source.map_or(source_toggle.max_y() + CARD_PADDING, |rect| {
@@ -199,11 +196,10 @@ pub struct GalleryExample {
     output_background: NativeBorder,
     options_background: NativeBorder,
     source_background: NativeBorder,
-    source_panel: NativeText,
+    source_panel: NativeSourceView,
     id: CardId,
     has_output: bool,
     has_options: bool,
-    source_chars: usize,
 }
 
 impl GalleryExample {
@@ -235,7 +231,11 @@ impl GalleryExample {
         }
         source_toggle.set_three_state(false)?;
         source_toggle.set_checked(Some(false))?;
-        let source_panel = NativeText::new(root.as_container(), source)?;
+        let source_panel = NativeSourceView::new(
+            root.as_container(),
+            source,
+            &format!("Source code viewer — {title_text}"),
+        )?;
         source_panel.set_visible(false)?;
         Ok(Self {
             root,
@@ -255,7 +255,6 @@ impl GalleryExample {
             id,
             has_output,
             has_options,
-            source_chars: source.len(),
         })
     }
 
@@ -264,13 +263,7 @@ impl GalleryExample {
     }
 
     pub fn calculate_layout(&self, width: f64, source_expanded: bool) -> CardLayout {
-        CardLayout::calculate(
-            width,
-            self.has_output,
-            self.has_options,
-            source_expanded,
-            self.source_chars,
-        )
+        CardLayout::calculate(width, self.has_output, self.has_options, source_expanded)
     }
 
     pub fn set_layout(&mut self, top: f64, layout: CardLayout) -> Result<()> {
@@ -378,44 +371,60 @@ impl AsContainer for GalleryExample {
     }
 }
 
-struct NativeText {
-    element: MUX::FrameworkElement,
+struct NativeSourceView {
+    element: MUXC::TextBox,
     canvas: windows::core::Weak<MUXC::Canvas>,
 }
-impl NativeText {
-    fn new(parent: BorrowedContainer<'_>, text: &str) -> Result<Self> {
+impl NativeSourceView {
+    fn new(parent: BorrowedContainer<'_>, text: &str, accessible_name: &str) -> Result<Self> {
         let xaml = HSTRING::from(
-            r#"<TextBlock xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" FontFamily="Consolas" FontSize="13" TextWrapping="Wrap" />"#,
+            r#"<TextBox xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" FontFamily="Cascadia Mono" FontSize="13" Padding="10" BorderThickness="0" Background="Transparent" />"#,
         );
-        let block = MUX::Markup::XamlReader::Load(&xaml)?.cast::<MUXC::TextBlock>()?;
-        block.SetText(&HSTRING::from(text))?;
+        let text_box = MUX::Markup::XamlReader::Load(&xaml)?.cast::<MUXC::TextBox>()?;
+        text_box.SetAcceptsReturn(true)?;
+        text_box.SetTextWrapping(MUX::TextWrapping::NoWrap)?;
+        text_box.SetText(&HSTRING::from(text))?;
+        text_box.SetIsReadOnly(true)?;
+        MUXC::ScrollViewer::SetHorizontalScrollBarVisibility2(
+            &text_box,
+            MUXC::ScrollBarVisibility::Auto,
+        )?;
+        MUXC::ScrollViewer::SetVerticalScrollBarVisibility2(
+            &text_box,
+            MUXC::ScrollBarVisibility::Auto,
+        )?;
+        AutomationProperties::SetName(&text_box, &HSTRING::from(accessible_name))?;
         let canvas = parent.as_winui();
-        canvas.Children()?.Append(&block)?;
+        canvas.Children()?.Append(&text_box)?;
         Ok(Self {
-            element: block.cast()?,
+            element: text_box,
             canvas: canvas.downgrade()?,
         })
     }
     fn set_visible(&self, visible: bool) -> Result<()> {
-        self.element.SetVisibility(if visible {
-            MUX::Visibility::Visible
-        } else {
-            MUX::Visibility::Collapsed
-        })?;
+        self.element
+            .cast::<MUX::FrameworkElement>()?
+            .SetVisibility(if visible {
+                MUX::Visibility::Visible
+            } else {
+                MUX::Visibility::Collapsed
+            })?;
         Ok(())
     }
     fn set_loc(&self, p: Point) -> Result<()> {
-        MUXC::Canvas::SetLeft(&self.element, p.x)?;
-        MUXC::Canvas::SetTop(&self.element, p.y)?;
+        let element = self.element.cast::<MUX::FrameworkElement>()?;
+        MUXC::Canvas::SetLeft(&element, p.x)?;
+        MUXC::Canvas::SetTop(&element, p.y)?;
         Ok(())
     }
     fn set_size(&self, size: Size) -> Result<()> {
-        self.element.SetWidth(size.width)?;
-        self.element.SetHeight(size.height)?;
+        let element = self.element.cast::<MUX::FrameworkElement>()?;
+        element.SetWidth(size.width)?;
+        element.SetHeight(size.height)?;
         Ok(())
     }
 }
-impl Drop for NativeText {
+impl Drop for NativeSourceView {
     fn drop(&mut self) {
         let Some(canvas) = self.canvas.upgrade() else {
             return;
@@ -423,13 +432,15 @@ impl Drop for NativeText {
         let Ok(children) = canvas.Children() else {
             return;
         };
+        let Ok(element) = self.element.cast::<MUX::UIElement>() else {
+            return;
+        };
         let mut index = 0;
-        if children.IndexOf(&self.element, &mut index).is_ok() {
+        if children.IndexOf(&element, &mut index).is_ok() {
             let _ = children.RemoveAt(index);
         }
     }
 }
-
 struct NativeBorder {
     element: Border,
     canvas: windows::core::Weak<MUXC::Canvas>,
@@ -504,8 +515,8 @@ mod tests {
     use super::*;
     #[test]
     fn wide_and_narrow_card_layouts_are_responsive() {
-        let wide = CardLayout::calculate(1064.0, true, true, false, 2000);
-        let narrow = CardLayout::calculate(560.0, true, true, false, 2000);
+        let wide = CardLayout::calculate(1064.0, true, true, false);
+        let narrow = CardLayout::calculate(560.0, true, true, false);
         assert!(wide.wide);
         assert!(!narrow.wide);
         assert!(wide.output.unwrap().origin.x > wide.primary.origin.x);
@@ -516,8 +527,8 @@ mod tests {
     fn page_caps_width_and_stacks_card_extents() {
         assert_eq!(page_width(1400.0), PAGE_MAX_WIDTH);
         let cards = [
-            CardLayout::calculate(900.0, true, true, false, 300),
-            CardLayout::calculate(900.0, true, false, false, 300),
+            CardLayout::calculate(900.0, true, true, false),
+            CardLayout::calculate(900.0, true, false, false),
         ];
         let (tops, extent) = stack_cards(&cards);
         assert_eq!(tops[0], 0.0);
@@ -526,12 +537,13 @@ mod tests {
     }
     #[test]
     fn expanded_source_pushes_following_card_and_page_extent() {
-        let first = CardLayout::calculate(900.0, true, true, false, 6000);
-        let expanded = CardLayout::calculate(900.0, true, true, true, 6000);
-        let second = CardLayout::calculate(900.0, true, false, false, 200);
+        let first = CardLayout::calculate(900.0, true, true, false);
+        let expanded = CardLayout::calculate(900.0, true, true, true);
+        let second = CardLayout::calculate(900.0, true, false, false);
         let (before, before_extent) = stack_cards(&[first, second]);
         let (after, after_extent) = stack_cards(&[expanded, second]);
         assert!(after[1] > before[1]);
         assert!(after_extent > before_extent);
+        assert_eq!(expanded.source.unwrap().size.height, SOURCE_VIEWER_HEIGHT);
     }
 }
