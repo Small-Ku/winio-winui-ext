@@ -92,6 +92,33 @@ function Wait-ScrollViewer($Window) {
     if ($null -eq $chosen) { throw 'Timed out finding routed sample ScrollViewer.' }
     return $chosen
 }
+function Get-ScrollViewers($Window) {
+    $condition = [System.Windows.Automation.AndCondition]::new(
+        (TypeCondition ([System.Windows.Automation.ControlType]::Pane)),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'ScrollViewer'))
+    $all = $Window.FindAll($descendants, $condition)
+    $pane = $Window.FindFirst($descendants, [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'PaneRoot'))
+    $pageLeft = if ($null -eq $pane) { 0 } else { $pane.Current.BoundingRectangle.Right - 4 }
+    $matches = [System.Collections.Generic.List[System.Windows.Automation.AutomationElement]]::new()
+    for ($i = 0; $i -lt $all.Count; $i++) {
+        $candidate = $all.Item($i)
+        if (-not $candidate.Current.IsOffscreen -and $candidate.Current.BoundingRectangle.Left -ge $pageLeft -and $candidate.Current.BoundingRectangle.Top -gt 100) { $matches.Add($candidate) }
+    }
+    return ,$matches.ToArray()
+}
+function Wait-CardSourceToggle($Window, [string]$CardName) {
+    return Wait-Element $Window (Condition ([System.Windows.Automation.ControlType]::Button) "Source code — $CardName") "Source code toggle for $CardName"
+}
+function Get-ScrollContentTop($Element, $ScrollViewer) {
+    $scroll = [System.Windows.Automation.ScrollPattern]$ScrollViewer.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
+    $viewport = $ScrollViewer.Current.BoundingRectangle
+    $viewSize = $scroll.Current.VerticalViewSize
+    if ($viewSize -le 0) { throw 'ScrollViewer exposed an invalid vertical view size.' }
+    $extent = $viewport.Height * 100 / $viewSize
+    $percent = [Math]::Max(0, $scroll.Current.VerticalScrollPercent)
+    $offset = $percent / 100 * [Math]::Max(0, $extent - $viewport.Height)
+    return $Element.Current.BoundingRectangle.Top - $viewport.Top + $offset
+}
 function Find-SourceMarker($Window, [string]$Marker) {
     $texts = $Window.FindAll($descendants, (TypeCondition ([System.Windows.Automation.ControlType]::Text)))
     for ($i = 0; $i -lt $texts.Count; $i++) {
@@ -205,11 +232,25 @@ try {
         throw "Gallery content did not restore after pane reopen: expandedHomeX=$expandedPageHomeLeft reopenedHomeX=$($reopenedPageHome.Current.BoundingRectangle.Left)."
     }
 
+    $hwnd = [IntPtr]$window.Current.NativeWindowHandle
+    if (-not [GalleryWindow]::SetWindowPos($hwnd, [IntPtr]::Zero, 0, 0, 1280, 760, 0x0006)) { throw "Could not resize Gallery window for multi-card layout evidence (Win32 $([Runtime.InteropServices.Marshal]::GetLastWin32Error()))." }
+    Start-Sleep -Milliseconds 400
+    $window = Wait-MainWindow $process $pc
     Select-NavigationSample $window 'Basic input' 'ToggleButton'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ToggleButton'
-    $toggle = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Native WinUI ToggleButton') 'routed ToggleButton'
+    $scrollViewers = Get-ScrollViewers $window
+    if ($scrollViewers.Count -ne 1) { throw "ToggleButton route must expose exactly one page ScrollViewer; found $($scrollViewers.Count)." }
+    $toggle = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Three-state sample') 'three-state ToggleButton example'
+    $basicToggle = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample') 'basic ToggleButton example'
+    if ($basicToggle.Current.BoundingRectangle.Top -le $toggle.Current.BoundingRectangle.Bottom) { throw 'ToggleButton example cards overlap instead of stacking vertically.' }
     $toggleOutput = Wait-Text $window 'indeterminate'
-    $sourceToggle = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Source code') 'collapsed Source code toggle'
+    $basicOutput = Wait-Text $window 'unchecked'
+    $sourceToggle = Wait-CardSourceToggle $window 'ToggleButton — three-state'
+    $basicSourceToggle = Wait-CardSourceToggle $window 'ToggleButton — basic'
+    if ($sourceToggle.Current.Name -eq $basicSourceToggle.Current.Name) { throw 'ToggleButton cards do not have distinct accessible source toggle names.' }
+    $toggleButtons = $window.FindAll($descendants, (Condition ([System.Windows.Automation.ControlType]::Button) 'Three-state sample'))
+    $basicButtons = $window.FindAll($descendants, (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample'))
+    if ($toggleButtons.Count -ne 1 -or $basicButtons.Count -ne 1) { throw "Expected exactly two distinct example controls; three-state=$($toggleButtons.Count), basic=$($basicButtons.Count)." }
     $sourcePattern = [System.Windows.Automation.TogglePattern]$sourceToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
     if ($sourcePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'Source code did not start collapsed.' }
     $threeStateOption = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Three-state: On') 'live ToggleButton option'
@@ -230,8 +271,22 @@ try {
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample toggle-button: checked'
     $toggleOutput = Wait-Text $window 'checked'
 
+    ([System.Windows.Automation.TogglePattern]$basicToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample toggle-button: basic checked'
+    $basicOutput = Wait-Text $window 'checked'
+    if ($basicOutput.Current.Name -ne 'checked') { throw 'Basic ToggleButton output did not follow its independent state.' }
+    ([System.Windows.Automation.TogglePattern]$basicToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample toggle-button: basic unchecked'
+    $basicOutput = Wait-Text $window 'unchecked'
+
+    $collapsedScroll = Wait-ScrollViewer $window
+    $collapsedScrollPattern = [System.Windows.Automation.ScrollPattern]$collapsedScroll.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
+    if ($collapsedScrollPattern.Current.VerticallyScrollable) { $collapsedScrollPattern.SetScrollPercent(-1, 100) }
+    $basicBeforeElement = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample') 'basic ToggleButton before Card A source expansion'
+    $basicContentTopBefore = Get-ScrollContentTop $basicBeforeElement $collapsedScroll
+    if ($collapsedScrollPattern.Current.VerticallyScrollable) { $collapsedScrollPattern.SetScrollPercent(-1, 0) }
     $sourcePattern.Toggle()
-    $sourceToggle = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Source code') 'expanded Source code toggle'
+    $sourceToggle = Wait-CardSourceToggle $window 'ToggleButton — three-state'
     $deadline = [DateTime]::UtcNow.AddSeconds(8)
     do {
         $sourceMarker = Find-SourceMarker $window 'skip_initial_event'
@@ -240,11 +295,17 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -eq $sourceMarker) { throw 'Expanded Rust source did not expose its skip_initial_event marker.' }
     $sampleScroll = Wait-ScrollViewer $window
+    if ((Get-ScrollViewers $window).Count -ne 1) { throw 'Source expansion created a card-local ScrollViewer.' }
+    $basicHeading = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample') 'basic ToggleButton after Card A source expansion'
     $scrollPattern = [System.Windows.Automation.ScrollPattern]$sampleScroll.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
     if ($scrollPattern.Current.HorizontallyScrollable) { throw 'The routed sample ScrollViewer enabled horizontal scrolling.' }
     if ($scrollPattern.Current.VerticalScrollPercent -lt 0 -or $scrollPattern.Current.VerticalViewSize -ge 100) {
         throw "Expanded source did not increase the vertical ScrollViewer extent: percent=$($scrollPattern.Current.VerticalScrollPercent), view=$($scrollPattern.Current.VerticalViewSize)."
     }
+    $scrollPattern.SetScrollPercent(-1, 100)
+    $basicContentTopAfter = Get-ScrollContentTop $basicHeading $sampleScroll
+    if ($basicContentTopAfter -le $basicContentTopBefore) { throw "Expanding Card A source did not push Card B downward: contentY before=$basicContentTopBefore after=$basicContentTopAfter." }
+    $sourceExtentAfterA = $scrollPattern.Current.VerticalViewSize
     $fixedTitleBeforeScroll = (Wait-ShellTitle $window 'ToggleButton').Current.BoundingRectangle
     $paneBeforeScroll = (Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'PaneRoot')) 'fixed navigation pane').Current.BoundingRectangle
     $scrollPercentBefore = $scrollPattern.Current.VerticalScrollPercent
@@ -274,19 +335,61 @@ try {
         Start-Sleep -Milliseconds 100
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($scrollPattern.Current.VerticalScrollPercent -gt 2) { throw "The routed page did not return to its start: $($scrollPattern.Current.VerticalScrollPercent)." }
-    $sourceToggle = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Source code') 'Source code toggle after scrolling'
+    $sourceToggle = Wait-CardSourceToggle $window 'ToggleButton — three-state'
     ([System.Windows.Automation.TogglePattern]$sourceToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
-    if (([System.Windows.Automation.TogglePattern]$sourceToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) {
-        throw 'Source code did not collapse after the scroll check.'
+    $deadline = [DateTime]::UtcNow.AddSeconds(8)
+    $collapsedExtent = $null
+    do {
+        $sourceToggle = Wait-CardSourceToggle $window 'ToggleButton — three-state'
+        $sourceState = ([System.Windows.Automation.TogglePattern]$sourceToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Current.ToggleState
+        $sampleScroll = Wait-ScrollViewer $window
+        $collapsedPattern = [System.Windows.Automation.ScrollPattern]$sampleScroll.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
+        if ($sourceState -eq [System.Windows.Automation.ToggleState]::Off -and $collapsedPattern.Current.VerticalViewSize -gt ($sourceExtentAfterA + 0.01)) {
+            $collapsedExtent = $collapsedPattern.Current.VerticalViewSize
+            break
+        }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($null -eq $collapsedExtent) {
+        throw "Card A source collapsed visually but page extent did not shrink: expanded view=$sourceExtentAfterA current view=$($collapsedPattern.Current.VerticalViewSize)."
     }
+    $basicSourceToggle = Wait-CardSourceToggle $window 'ToggleButton — basic'
+    if (([System.Windows.Automation.TogglePattern]$basicSourceToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'Card B source expanded when Card A was toggled.' }
+    ([System.Windows.Automation.TogglePattern]$basicSourceToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
+    $deadline = [DateTime]::UtcNow.AddSeconds(8)
+    $expandedBasicExtent = $null
+    do {
+        $basicSourceToggle = Wait-CardSourceToggle $window 'ToggleButton — basic'
+        $basicSourceState = ([System.Windows.Automation.TogglePattern]$basicSourceToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Current.ToggleState
+        $sampleScroll = Wait-ScrollViewer $window
+        $scrollPattern = [System.Windows.Automation.ScrollPattern]$sampleScroll.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
+        if ($basicSourceState -eq [System.Windows.Automation.ToggleState]::On -and $scrollPattern.Current.VerticalViewSize -lt ($collapsedExtent - 0.01)) {
+            $expandedBasicExtent = $scrollPattern.Current.VerticalViewSize
+            break
+        }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($null -eq $expandedBasicExtent) { throw "Card B source expansion did not independently change page scroll extent: collapsed view=$collapsedExtent current view=$($scrollPattern.Current.VerticalViewSize)." }
+    if (([System.Windows.Automation.TogglePattern]$sourceToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'Card B source toggle changed Card A state.' }
+    if ($null -eq (Find-SourceMarker $window 'skip_initial_event')) { throw 'Card B source expansion did not reveal the compiled Rust source.' }
+    ([System.Windows.Automation.TogglePattern]$basicSourceToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
+    $deadline = [DateTime]::UtcNow.AddSeconds(8)
+    do {
+        $basicSourceToggle = Wait-CardSourceToggle $window 'ToggleButton — basic'
+        $basicSourceState = ([System.Windows.Automation.TogglePattern]$basicSourceToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Current.ToggleState
+        if ($basicSourceState -eq [System.Windows.Automation.ToggleState]::Off) { break }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($basicSourceState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'Card B source did not collapse independently.' }
 
     $search = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'AutoSuggestBox')) 'AutoSuggestBox after sample route'
     $edit = Wait-Element $search (TypeCondition ([System.Windows.Automation.ControlType]::Edit)) 'AutoSuggestBox edit'
     ([System.Windows.Automation.ValuePattern]$edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)).SetValue('NumberBox')
     ([System.Windows.Automation.InvokePattern]$search.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — NumberBox'
-    $staleToggle = $window.FindFirst($descendants, (Condition ([System.Windows.Automation.ControlType]::Button) 'Native WinUI ToggleButton'))
-    if ($null -ne $staleToggle) { throw 'ToggleButton remained in the main UIA subtree after replacing it with NumberBox.' }
+    $staleThreeToggle = $window.FindFirst($descendants, (Condition ([System.Windows.Automation.ControlType]::Button) 'Three-state sample'))
+    $staleBasicToggle = $window.FindFirst($descendants, (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample'))
+    if ($null -ne $staleThreeToggle -or $null -ne $staleBasicToggle) { throw 'A ToggleButton example remained in the main UIA subtree after replacing it with NumberBox.' }
     $number = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
         [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Spinner),
         [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.NumberBox'))) 'routed NumberBox'
@@ -310,7 +413,7 @@ try {
     ([System.Windows.Automation.InvokePattern]$titlePaneToggle.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     Start-Sleep -Milliseconds 350
     $hwnd = [IntPtr]$window.Current.NativeWindowHandle
-    if (-not [GalleryWindow]::SetWindowPos($hwnd, [IntPtr]::Zero, 0, 0, 1080, 900, 0x0006)) {
+    if (-not [GalleryWindow]::SetWindowPos($hwnd, [IntPtr]::Zero, 0, 0, 900, 900, 0x0006)) {
         throw "Could not resize Gallery window for narrow layout (Win32 $([Runtime.InteropServices.Marshal]::GetLastWin32Error()))."
     }
     Start-Sleep -Milliseconds 500
@@ -325,6 +428,18 @@ try {
     $narrowViewportRect = $narrowScroll.Current.BoundingRectangle
     if ($narrowControlRect.Right -gt ($narrowViewportRect.Right + 4) -or $narrowControlRect.Left -lt ($narrowViewportRect.Left - 4) -or $narrowOptionRect.Top -lt $narrowControlRect.Bottom) {
         throw "Narrow card geometry overlaps or clips the NumberBox/options regions: viewport=$narrowViewportRect number=$narrowControlRect option=$narrowOptionRect."
+    }
+
+    Select-NavigationSample $window 'Basic input' 'ToggleButton'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ToggleButton'
+    if ((Get-ScrollViewers $window).Count -ne 1) { throw 'Narrow ToggleButton route did not keep one page ScrollViewer.' }
+    $narrowThree = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Three-state sample') 'narrow three-state example'
+    $narrowBasic = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample') 'narrow basic example'
+    $narrowOption = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Three-state: On') 'narrow ToggleButton option'
+    $outputHeadings = $window.FindAll($descendants, (Condition ([System.Windows.Automation.ControlType]::Text) 'Output'))
+    $optionsHeading = Wait-Text $window 'Options'
+    if ($outputHeadings.Count -ne 2 -or $outputHeadings.Item(0).Current.BoundingRectangle.Top -le $narrowThree.Current.BoundingRectangle.Bottom -or $optionsHeading.Current.BoundingRectangle.Top -le $outputHeadings.Item(0).Current.BoundingRectangle.Bottom -or $narrowOption.Current.BoundingRectangle.Top -le $optionsHeading.Current.BoundingRectangle.Bottom -or $narrowBasic.Current.BoundingRectangle.Top -le $narrowOption.Current.BoundingRectangle.Bottom) {
+        throw 'Narrow ToggleButton cards, Output, or Options regions overlap instead of stacking.'
     }
 
     Select-NavigationSample $window 'Status and info' 'InfoBar'
@@ -393,7 +508,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and ScrollViewer viewport; integrated TitleBar/search/pane and caption Close; catalog navigation; live ToggleButton output/options; collapsed, expanded, scrollable, and recollapsed Rust source; AutoSuggestBox route and stale-peer removal; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; InfoBar; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; collapsed, expanded, scrollable, and recollapsed Rust source; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; InfoBar; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

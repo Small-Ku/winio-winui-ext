@@ -1,12 +1,13 @@
-use crate::{catalog::GallerySampleKind, samples};
+use crate::{catalog::GallerySampleKind, chrome::CardId, samples};
 use winio::prelude::*;
 
 #[derive(Debug)]
 pub enum GallerySampleMessage {
     SetBounds(Rect),
     Emit(String),
+    ExampleChanged { card: CardId, value: String },
     OpenTeachingTip,
-    SourceExpanded(bool),
+    SourceExpanded { card: CardId, expanded: bool },
     ToggleThreeState(bool),
     NumberStepOption(bool),
 }
