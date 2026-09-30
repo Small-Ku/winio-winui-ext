@@ -1,3 +1,4 @@
+pub mod expander;
 pub mod info_bar;
 pub mod number_box;
 pub mod overview;

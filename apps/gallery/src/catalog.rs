@@ -8,15 +8,17 @@ pub enum GallerySectionId {
     StatusInfo,
     Text,
     DialogsFlyouts,
+    Layout,
     Collections,
 }
 
 impl GallerySectionId {
-    pub const ALL: [Self; 5] = [
+    pub const ALL: [Self; 6] = [
         Self::BasicInput,
         Self::StatusInfo,
         Self::Text,
         Self::DialogsFlyouts,
+        Self::Layout,
         Self::Collections,
     ];
 
@@ -26,6 +28,7 @@ impl GallerySectionId {
             Self::StatusInfo => "status-info",
             Self::Text => "text",
             Self::DialogsFlyouts => "dialogs-flyouts",
+            Self::Layout => "layout",
             Self::Collections => "collections",
         }
     }
@@ -36,6 +39,7 @@ impl GallerySectionId {
             Self::StatusInfo => "Status and info",
             Self::Text => "Text",
             Self::DialogsFlyouts => "Dialogs and flyouts",
+            Self::Layout => "Layout",
             Self::Collections => "Collections",
         }
     }
@@ -46,6 +50,7 @@ impl GallerySectionId {
             Self::StatusInfo => NavigationViewItemIcon::Info,
             Self::Text => NavigationViewItemIcon::Document,
             Self::DialogsFlyouts => NavigationViewItemIcon::Comment,
+            Self::Layout => NavigationViewItemIcon::ViewAll,
             Self::Collections => NavigationViewItemIcon::List,
         }
     }
@@ -56,6 +61,7 @@ pub enum GallerySampleKind {
     Overview,
     ToggleButton,
     ToggleSwitch,
+    Expander,
     InfoBar,
     NumberBox,
     TeachingTip,
@@ -96,6 +102,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["toggle", "switch", "boolean", "state"],
         description: "Native ToggleSwitch with typed on/off events.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::Expander,
+        id: "expander",
+        title: "Expander",
+        section: Some(GallerySectionId::Layout),
+        keywords: &["expander", "expand", "collapse", "layout", "content"],
+        description: "Native Expander hosting Winio-owned nested content.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::InfoBar,
@@ -211,6 +225,10 @@ mod tests {
         assert_eq!(
             by_id("toggle-switch").unwrap().section,
             Some(GallerySectionId::BasicInput)
+        );
+        assert_eq!(
+            by_id("expander").unwrap().section,
+            Some(GallerySectionId::Layout)
         );
         assert_eq!(
             by_id("info-bar").unwrap().section,

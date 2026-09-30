@@ -6,6 +6,7 @@ mod native;
 
 mod controls {
     mod auto_suggest_box;
+    mod expander;
     mod info_bar;
     mod integrated_title_bar;
     mod navigation_view;
@@ -19,6 +20,7 @@ mod controls {
         AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxItemDescriptor, AutoSuggestBoxMessage,
         AutoSuggestBoxTextChangeReason,
     };
+    pub use expander::{Expander, ExpanderEvent, ExpanderMessage};
     pub use info_bar::{InfoBar, InfoBarMessage};
     pub use integrated_title_bar::{
         IntegratedTitleBar, IntegratedTitleBarEvent, IntegratedTitleBarInit,
