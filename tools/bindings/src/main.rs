@@ -222,6 +222,14 @@ const WRAPPER_CONTRACTS: &[WrapperContract] = &[
                 fragment: "pub fn SetPaneDisplayMode(",
             },
             RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn SetIsPaneToggleButtonVisible(",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn SetIsBackButtonVisible(",
+            },
+            RequiredMethod {
                 type_name: "NavigationViewItem",
                 fragment: "pub fn SelectsOnInvoked(",
             },
@@ -232,6 +240,18 @@ const WRAPPER_CONTRACTS: &[WrapperContract] = &[
             RequiredMethod {
                 type_name: "NavigationViewItem",
                 fragment: "pub fn SetSelectsOnInvoked(",
+            },
+            RequiredMethod {
+                type_name: "NavigationViewItem",
+                fragment: "pub fn SetIcon<",
+            },
+            RequiredMethod {
+                type_name: "SymbolIcon",
+                fragment: "pub fn new()",
+            },
+            RequiredMethod {
+                type_name: "SymbolIcon",
+                fragment: "pub fn SetSymbol(",
             },
             RequiredMethod {
                 type_name: "NavigationViewSelectionChangedEventArgs",
@@ -327,6 +347,30 @@ const WRAPPER_CONTRACTS: &[WrapperContract] = &[
             },
             RequiredMethod {
                 type_name: "TitleBar",
+                fragment: "pub fn SetIsBackButtonVisible(",
+            },
+            RequiredMethod {
+                type_name: "TitleBar",
+                fragment: "pub fn SetIsPaneToggleButtonVisible(",
+            },
+            RequiredMethod {
+                type_name: "TitleBar",
+                fragment: "pub fn BackRequested<",
+            },
+            RequiredMethod {
+                type_name: "TitleBar",
+                fragment: "pub fn RemoveBackRequested(",
+            },
+            RequiredMethod {
+                type_name: "TitleBar",
+                fragment: "pub fn PaneToggleRequested<",
+            },
+            RequiredMethod {
+                type_name: "TitleBar",
+                fragment: "pub fn RemovePaneToggleRequested(",
+            },
+            RequiredMethod {
+                type_name: "TitleBar",
                 fragment: "pub fn new()",
             },
         ],
@@ -366,6 +410,14 @@ const WRAPPER_CONTRACTS: &[WrapperContract] = &[
             RequiredMethod {
                 type_name: "TreeViewNode",
                 fragment: "pub fn SetContent<",
+            },
+            RequiredMethod {
+                type_name: "AutomationProperties",
+                fragment: "pub fn GetAutomationId<",
+            },
+            RequiredMethod {
+                type_name: "AutomationProperties",
+                fragment: "pub fn SetAutomationId<",
             },
             RequiredMethod {
                 type_name: "TreeViewNode",

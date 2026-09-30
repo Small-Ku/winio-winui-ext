@@ -2441,8 +2441,10 @@ dependencies = [
 name = "winio-winui-ext-gallery"
 version = "0.0.0"
 dependencies = [
+ "windows",
  "winio",
  "winio-winui-ext",
+ "winio-winui3",
 ]
 
 [[package]]

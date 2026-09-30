@@ -13,7 +13,7 @@ impl Component for TreeViewSample {
     type Message = GallerySampleMessage;
     async fn init(init: Self::Init<'_>, _: &ComponentSender<Self>) -> Result<Self> {
         let GallerySampleInit { parent, generation } = init;
-        init! {root:View=(parent),tree:TreeView=(&root)=>{size:Size::new(300.0,230.0)}}
+        init! {root:View=(parent),tree:TreeView=(&root)=>{size:Size::new(520.0,230.0)}}
         tree.set_nodes(&[TreeViewNodeDescriptor::new("root", "Root node")
             .with_children([TreeViewNodeDescriptor::new("leaf", "Leaf node")])])?;
         Ok(Self {
@@ -30,7 +30,8 @@ impl Component for TreeViewSample {
             GallerySampleMessage::SetBounds(r) => {
                 self.root.set_rect(r)?;
                 self.tree.set_loc(Point::new(24.0, 24.0))?;
-                self.tree.set_size(Size::new(300.0, 230.0))?;
+                self.tree
+                    .set_size(Size::new((r.size.width - 48.0).max(0.0), 230.0))?;
             }
             GallerySampleMessage::Emit(v) => s.output(GallerySampleEvent::Output {
                 generation: self.generation,

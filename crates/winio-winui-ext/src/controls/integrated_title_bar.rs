@@ -1,4 +1,5 @@
-use windows::core::{HSTRING, Interface};
+use windows::Foundation::TypedEventHandler;
+use windows::core::{HSTRING, IInspectable, Interface};
 use winio::elm::{Component, ComponentSender};
 use winio::handle::{
     AsContainer, AsWidget, AsWindow, BorrowedContainer, BorrowedWidget, BorrowedWindow,
@@ -32,6 +33,8 @@ pub struct IntegratedTitleBar {
     native: NativeTitleBar,
     element: NativeElement,
     window: MUX::Window,
+    back_requested_token: i64,
+    pane_toggle_requested_token: i64,
 }
 
 impl Failable for IntegratedTitleBar {
@@ -59,6 +62,30 @@ impl IntegratedTitleBar {
 
     pub fn is_integrated(&self) -> Result<bool> {
         self.window.ExtendsContentIntoTitleBar()
+    }
+
+    pub fn is_back_button_visible(&self) -> Result<bool> {
+        self.native.IsBackButtonVisible()
+    }
+
+    pub fn set_is_back_button_visible(&mut self, visible: bool) -> Result<()> {
+        self.native.SetIsBackButtonVisible(visible)?;
+        Ok(())
+    }
+
+    pub fn is_pane_toggle_button_visible(&self) -> Result<bool> {
+        self.native.IsPaneToggleButtonVisible()
+    }
+
+    pub fn set_is_pane_toggle_button_visible(&mut self, visible: bool) -> Result<()> {
+        self.native.SetIsPaneToggleButtonVisible(visible)?;
+        Ok(())
+    }
+
+    pub fn set_mica_backdrop(&mut self) -> Result<()> {
+        let backdrop = MUX::Media::MicaBackdrop::new()?;
+        self.window.SetSystemBackdrop(&backdrop)?;
+        Ok(())
     }
 }
 
@@ -110,17 +137,40 @@ impl Layoutable for IntegratedTitleBar {
 
 #[derive(Debug)]
 #[non_exhaustive]
+pub enum IntegratedTitleBarEvent {
+    BackRequested,
+    PaneToggleRequested,
+}
+
+#[derive(Debug)]
+#[non_exhaustive]
 pub enum IntegratedTitleBarMessage {}
 
 impl Component for IntegratedTitleBar {
     type Error = Error;
-    type Event = ();
+    type Event = IntegratedTitleBarEvent;
     type Init<'a> = IntegratedTitleBarInit<'a>;
     type Message = IntegratedTitleBarMessage;
 
-    async fn init(init: Self::Init<'_>, _sender: &ComponentSender<Self>) -> Result<Self> {
+    async fn init(init: Self::Init<'_>, sender: &ComponentSender<Self>) -> Result<Self> {
         let window = init.window.as_winui().clone();
         let native = NativeTitleBar::new()?;
+        let back_sender = sender.clone();
+        let back_requested_token = native.BackRequested(&TypedEventHandler::<
+            NativeTitleBar,
+            IInspectable,
+        >::new(move |_, _| {
+            back_sender.output(IntegratedTitleBarEvent::BackRequested);
+            Ok(())
+        }))?;
+        let pane_sender = sender.clone();
+        let pane_toggle_requested_token =
+            native.PaneToggleRequested(&TypedEventHandler::<NativeTitleBar, IInspectable>::new(
+                move |_, _| {
+                    pane_sender.output(IntegratedTitleBarEvent::PaneToggleRequested);
+                    Ok(())
+                },
+            ))?;
         let framework_element = native.cast::<MUX::FrameworkElement>()?;
         let ui_element = native.cast::<MUX::UIElement>()?;
         let element = NativeElement::new(init.container, framework_element)?;
@@ -132,6 +182,8 @@ impl Component for IntegratedTitleBar {
             native,
             element,
             window,
+            back_requested_token,
+            pane_toggle_requested_token,
         })
     }
 }
@@ -144,6 +196,10 @@ impl AsWidget for IntegratedTitleBar {
 
 impl Drop for IntegratedTitleBar {
     fn drop(&mut self) {
+        let _ = self.native.RemoveBackRequested(self.back_requested_token);
+        let _ = self
+            .native
+            .RemovePaneToggleRequested(self.pane_toggle_requested_token);
         let _ = self.window.SetTitleBar(None::<&MUX::UIElement>);
         let _ = self.window.SetExtendsContentIntoTitleBar(false);
     }

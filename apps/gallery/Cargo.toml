@@ -7,3 +7,5 @@ publish = false
 [dependencies]
 winio.workspace = true
 winio-winui-ext = { path = "../../crates/winio-winui-ext" }
+windows.workspace = true
+winio_winui3.workspace = true

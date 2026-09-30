@@ -20,11 +20,12 @@ mod controls {
     };
     pub use info_bar::{InfoBar, InfoBarMessage};
     pub use integrated_title_bar::{
-        IntegratedTitleBar, IntegratedTitleBarInit, IntegratedTitleBarMessage,
+        IntegratedTitleBar, IntegratedTitleBarEvent, IntegratedTitleBarInit,
+        IntegratedTitleBarMessage,
     };
     pub use navigation_view::{
-        NavigationView, NavigationViewEvent, NavigationViewItemDescriptor, NavigationViewMessage,
-        NavigationViewPaneDisplayMode,
+        NavigationView, NavigationViewEvent, NavigationViewItemDescriptor, NavigationViewItemIcon,
+        NavigationViewMessage, NavigationViewPaneDisplayMode,
     };
     pub use number_box::{NumberBox, NumberBoxEvent, NumberBoxMessage, NumberBoxSpinPlacement};
     pub use teaching_tip::{

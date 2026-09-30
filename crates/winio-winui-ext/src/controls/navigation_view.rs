@@ -5,9 +5,10 @@ use winio::handle::{AsWidget, BorrowedContainer, BorrowedWidget};
 use winio::primitive::{Enable, Failable, Layoutable, Point, Size, Visible};
 use winio::{Error, Result};
 use winio_winui_bindings::Microsoft::UI::Xaml::Controls::{
-    NavigationView as NativeNavigationView, NavigationViewItem,
+    NavigationView as NativeNavigationView,
+    NavigationViewBackButtonVisible as NativeBackButtonVisible, NavigationViewItem,
     NavigationViewPaneDisplayMode as NativePaneDisplayMode,
-    NavigationViewSelectionChangedEventArgs,
+    NavigationViewSelectionChangedEventArgs, Symbol as NativeSymbol, SymbolIcon,
 };
 use winio_winui3::Microsoft::UI::Xaml::Controls as MUXC;
 
@@ -18,7 +19,34 @@ use crate::native::NativeElement;
 pub struct NavigationViewItemDescriptor {
     pub id: String,
     pub text: String,
+    pub icon: Option<NavigationViewItemIcon>,
     pub children: Vec<NavigationViewItemDescriptor>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum NavigationViewItemIcon {
+    Home,
+    Edit,
+    Info,
+    Comment,
+    List,
+    Document,
+    ViewAll,
+}
+
+impl NavigationViewItemIcon {
+    fn native(self) -> NativeSymbol {
+        match self {
+            Self::Home => NativeSymbol::Home,
+            Self::Edit => NativeSymbol::Edit,
+            Self::Info => NativeSymbol::ContactInfo,
+            Self::Comment => NativeSymbol::Comment,
+            Self::List => NativeSymbol::List,
+            Self::Document => NativeSymbol::Document,
+            Self::ViewAll => NativeSymbol::ViewAll,
+        }
+    }
 }
 
 impl NavigationViewItemDescriptor {
@@ -26,8 +54,14 @@ impl NavigationViewItemDescriptor {
         Self {
             id: id.into(),
             text: text.into(),
+            icon: None,
             children: Vec::new(),
         }
+    }
+
+    pub fn with_icon(mut self, icon: NavigationViewItemIcon) -> Self {
+        self.icon = Some(icon);
+        self
     }
 
     pub fn with_children(
@@ -138,6 +172,20 @@ impl NavigationView {
         self.native.SetIsSettingsVisible(value)?;
         Ok(())
     }
+
+    pub fn set_is_pane_toggle_button_visible(&mut self, visible: bool) -> Result<()> {
+        self.native.SetIsPaneToggleButtonVisible(visible)?;
+        Ok(())
+    }
+
+    pub fn set_is_back_button_visible(&mut self, visible: bool) -> Result<()> {
+        self.native.SetIsBackButtonVisible(if visible {
+            NativeBackButtonVisible::Visible
+        } else {
+            NativeBackButtonVisible::Collapsed
+        })?;
+        Ok(())
+    }
     pub fn pane_display_mode(&self) -> Result<NavigationViewPaneDisplayMode> {
         Ok(self.native.PaneDisplayMode()?.into())
     }
@@ -161,6 +209,11 @@ fn build_item(descriptor: &NavigationViewItemDescriptor) -> Result<NavigationVie
     native_item
         .cast::<MUXC::ContentControl>()?
         .SetContent(&text)?;
+    if let Some(icon) = descriptor.icon {
+        let native_icon = SymbolIcon::new()?;
+        native_icon.SetSymbol(icon.native())?;
+        native_item.SetIcon(&native_icon)?;
+    }
     let id = PropertyValue::CreateString(&HSTRING::from(descriptor.id.as_str()))?;
     native_item
         .cast::<winio_winui3::Microsoft::UI::Xaml::FrameworkElement>()?
@@ -395,5 +448,10 @@ mod tests {
             .with_children([NavigationViewItemDescriptor::new("tree", "TreeView")]);
         assert_eq!(item.children.len(), 1);
         assert_eq!(item.children[0].id, "tree");
+        assert_eq!(item.icon, None);
+
+        let home = NavigationViewItemDescriptor::new("home", "Home")
+            .with_icon(NavigationViewItemIcon::Home);
+        assert_eq!(home.icon, Some(NavigationViewItemIcon::Home));
     }
 }

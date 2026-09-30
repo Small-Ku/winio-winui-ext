@@ -14,7 +14,7 @@ impl Component for NumberBoxSample {
     type Message = GallerySampleMessage;
     async fn init(init: Self::Init<'_>, _: &ComponentSender<Self>) -> Result<Self> {
         let GallerySampleInit { parent, generation } = init;
-        init! {root:View=(parent),number:NumberBox=(&root)=>{size:Size::new(260.0,44.0)}}
+        init! {root:View=(parent),number:NumberBox=(&root)=>{size:Size::new(260.0,32.0)}}
         number.set_minimum(0.0)?;
         number.set_maximum(100.0)?;
         number.set_small_change(1.0)?;
@@ -35,8 +35,9 @@ impl Component for NumberBoxSample {
         match m {
             GallerySampleMessage::SetBounds(r) => {
                 self.root.set_rect(r)?;
+                let preferred_height = self.number.preferred_size()?.height.max(32.0);
                 self.number.set_loc(Point::new(24.0, 32.0))?;
-                self.number.set_size(Size::new(260.0, 44.0))?;
+                self.number.set_size(Size::new(260.0, preferred_height))?;
             }
             GallerySampleMessage::Emit(v) => {
                 let initial_echo = self.skip_initial_value && v == "10";

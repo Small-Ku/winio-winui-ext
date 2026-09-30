@@ -4,21 +4,31 @@ mod samples;
 
 use catalog::{GallerySampleKind, by_id, exact_query, navigation_items, suggestions};
 use sample::{GallerySampleChild, GallerySampleEvent, GallerySampleMessage, create_sample};
+use windows::core::Interface;
 use winio::prelude::*;
 use winio_winui_ext::{
     AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxTextChangeReason, IntegratedTitleBar,
-    NavigationView, NavigationViewEvent,
+    IntegratedTitleBarEvent, NavigationView, NavigationViewEvent, NavigationViewPaneDisplayMode,
 };
+use winio_winui3::Microsoft::UI::Xaml::Controls::TextBlock as NativeTextBlock;
 
 const APP_TITLE: &str = "Winio WinUI Extensions";
 const TITLE_BAR_HEIGHT: f64 = 48.0;
 const NAV_WIDTH: f64 = 300.0;
+const NAV_COMPACT_WIDTH: f64 = 48.0;
+const PAGE_MARGIN: f64 = 36.0;
+const MIN_TITLEBAR_SEARCH_WIDTH: f64 = 240.0;
+const PAGE_TITLE_TOP: f64 = TITLE_BAR_HEIGHT + 24.0;
+const PAGE_DESCRIPTION_TOP: f64 = TITLE_BAR_HEIGHT + 68.0;
+const SAMPLE_TOP: f64 = TITLE_BAR_HEIGHT + 122.0;
 
 struct MainModel {
     window: Child<Window>,
     title_bar: Child<IntegratedTitleBar>,
     navigation: Child<NavigationView>,
     search: Child<AutoSuggestBox>,
+    page_title: Child<Label>,
+    page_description: Child<Label>,
     sample: GallerySampleChild,
     active_sample_id: &'static str,
     sample_generation: u64,
@@ -32,6 +42,7 @@ enum MainMessage {
     NavigationSelected(Option<String>),
     SearchTextChanged(String),
     SearchSubmitted { query: String, id: Option<String> },
+    TogglePane,
     SampleEvent(GallerySampleEvent),
     Close,
 }
@@ -45,14 +56,19 @@ fn is_current_sample_event(
     active_generation == event_generation && active_sample_id == event_sample_id
 }
 
-fn content_bounds(client: Size) -> Rect {
-    let left = NAV_WIDTH + 30.0;
-    let top = TITLE_BAR_HEIGHT + 64.0;
+fn content_bounds(client: Size, pane_open: bool) -> Rect {
+    let pane_width = if pane_open {
+        NAV_WIDTH
+    } else {
+        NAV_COMPACT_WIDTH
+    };
+    let left = pane_width + PAGE_MARGIN;
+    let top = SAMPLE_TOP;
     Rect::new(
         Point::new(left, top),
         Size::new(
-            (client.width - left - 20.0).max(0.0),
-            (client.height - top - 20.0).max(0.0),
+            (client.width - left - PAGE_MARGIN).max(0.0),
+            (client.height - top - PAGE_MARGIN).max(0.0),
         ),
     )
 }
@@ -77,6 +93,8 @@ impl MainModel {
         if self.navigation.selected_id()?.as_deref() != Some(descriptor.id) {
             self.navigation.set_selected_id(descriptor.id)?;
         }
+        self.page_title.set_text(descriptor.title)?;
+        self.page_description.set_text(descriptor.description)?;
         self.window
             .set_text(format!("{APP_TITLE} — {}", descriptor.title))?;
         Ok(())
@@ -87,17 +105,46 @@ impl MainModel {
         self.title_bar.set_loc(Point::new(0.0, 0.0))?;
         self.title_bar
             .set_size(Size::new(client.width.max(0.0), TITLE_BAR_HEIGHT))?;
-        let nav_size = self.navigation.size()?;
-        self.navigation
-            .set_loc(Point::new(10.0, TITLE_BAR_HEIGHT + 64.0))?;
+
+        let pane_open = self.navigation.is_pane_open()?;
+        let pane_width = if pane_open {
+            NAV_WIDTH
+        } else {
+            NAV_COMPACT_WIDTH
+        };
+        self.navigation.set_loc(Point::new(0.0, TITLE_BAR_HEIGHT))?;
         self.navigation.set_size(Size::new(
-            nav_size.width.min(NAV_WIDTH),
-            (client.height - TITLE_BAR_HEIGHT - 74.0).max(0.0),
+            pane_width.min(client.width.max(0.0)),
+            (client.height - TITLE_BAR_HEIGHT).max(0.0),
         ))?;
-        self.search
-            .set_loc(Point::new(10.0, TITLE_BAR_HEIGHT + 10.0))?;
-        self.search
-            .set_size(Size::new(nav_size.width.min(NAV_WIDTH), 44.0))?;
+
+        let search_available = (client.width - 380.0).max(0.0);
+        if search_available >= MIN_TITLEBAR_SEARCH_WIDTH {
+            let search_width = search_available.min(580.0);
+            let search_left = ((client.width - search_width) / 2.0)
+                .max(190.0)
+                .min((client.width - search_width - 150.0).max(0.0));
+            let search_height = self.search.preferred_size()?.height.max(32.0);
+            self.search.set_visible(true)?;
+            self.search.set_loc(Point::new(
+                search_left,
+                ((TITLE_BAR_HEIGHT - search_height) / 2.0).max(0.0),
+            ))?;
+            self.search
+                .set_size(Size::new(search_width, search_height))?;
+        } else {
+            self.search.set_visible(false)?;
+        }
+
+        let content_left = pane_width + PAGE_MARGIN;
+        let content_width = (client.width - content_left - PAGE_MARGIN).max(0.0);
+        self.page_title
+            .set_loc(Point::new(content_left, PAGE_TITLE_TOP))?;
+        self.page_title.set_size(Size::new(content_width, 38.0))?;
+        self.page_description
+            .set_loc(Point::new(content_left, PAGE_DESCRIPTION_TOP))?;
+        self.page_description
+            .set_size(Size::new(content_width.min(1064.0), 48.0))?;
         Ok(())
     }
 }
@@ -113,17 +160,31 @@ impl Component for MainModel {
             window: Window = (()) => { text: APP_TITLE, size: Size::new(840.0, 600.0) },
             title_bar: IntegratedTitleBar = (&window) => { size: Size::new(840.0, TITLE_BAR_HEIGHT) },
             navigation: NavigationView = (&window) => { size: Size::new(NAV_WIDTH, 500.0) },
-            search: AutoSuggestBox = (&window) => { size: Size::new(NAV_WIDTH, 44.0) },
+            search: AutoSuggestBox = (&window) => { size: Size::new(580.0, 32.0) },
+            page_title: Label = (&window) => { text: "Home" },
+            page_description: Label = (&window) => { text: "Browse native WinUI extension samples and shell capabilities." },
         }
         title_bar.set_title(APP_TITLE)?;
-        title_bar.set_subtitle("Native integrated WinUI title bar")?;
+        title_bar.set_subtitle("")?;
+        title_bar.set_is_back_button_visible(false)?;
+        title_bar.set_is_pane_toggle_button_visible(true)?;
+        title_bar.set_mica_backdrop()?;
         assert!(title_bar.is_integrated()?);
-        navigation.set_header_text("Gallery")?;
         navigation.set_items(&navigation_items())?;
         navigation.set_footer_items(&[])?;
         navigation.set_is_settings_visible(false)?;
-        search.set_placeholder_text("Search gallery samples")?;
+        navigation.set_is_back_button_visible(false)?;
+        navigation.set_is_pane_toggle_button_visible(false)?;
+        navigation.set_pane_display_mode(NavigationViewPaneDisplayMode::Left)?;
+        navigation.set_is_pane_open(true)?;
+        navigation.set_selected_id("overview")?;
+        search.set_placeholder_text("Search controls and samples...")?;
         search.set_suggestions(&suggestions(""))?;
+        let title_text = page_title
+            .as_widget()
+            .as_winui()
+            .cast::<NativeTextBlock>()?;
+        title_text.SetFontSize(28.0)?;
         let initial_generation = 0;
         let mut sample = create_sample(
             GallerySampleKind::Overview,
@@ -131,15 +192,17 @@ impl Component for MainModel {
             initial_generation,
         )
         .await?;
-        let bounds = content_bounds(window.client_size()?);
+        let bounds = content_bounds(window.client_size()?, true);
         sample.emit(GallerySampleMessage::SetBounds(bounds)).await?;
         window.show()?;
-        window.set_text(format!("{APP_TITLE} — Overview"))?;
+        window.set_text(format!("{APP_TITLE} — Home"))?;
         Ok(Self {
             window,
             title_bar,
             navigation,
             search,
+            page_title,
+            page_description,
             sample,
             active_sample_id: "overview",
             sample_generation: initial_generation,
@@ -151,7 +214,10 @@ impl Component for MainModel {
         start! {
             sender, default: MainMessage::Noop,
             self.window => { WindowEvent::Close => MainMessage::Close, WindowEvent::Resize => MainMessage::Resize, },
-            self.title_bar => {},
+            self.title_bar => {
+                IntegratedTitleBarEvent::PaneToggleRequested => MainMessage::TogglePane,
+                IntegratedTitleBarEvent::BackRequested => MainMessage::Noop,
+            },
             self.navigation => {
                 NavigationViewEvent::SelectionChanged { selected_id, is_settings_selected: _ } => MainMessage::NavigationSelected(selected_id),
                 NavigationViewEvent::BackRequested => MainMessage::Noop,
@@ -162,6 +228,8 @@ impl Component for MainModel {
                 AutoSuggestBoxEvent::TextChanged { text, reason: AutoSuggestBoxTextChangeReason::UserInput } => MainMessage::SearchTextChanged(text),
                 AutoSuggestBoxEvent::TextChanged { .. } => MainMessage::Noop,
             },
+            self.page_title => {},
+            self.page_description => {},
             self.sample => {
                 GallerySampleEvent::Output { generation, sample_id, value } => MainMessage::SampleEvent(GallerySampleEvent::Output { generation, sample_id, value }),
             },
@@ -174,6 +242,8 @@ impl Component for MainModel {
             self.title_bar,
             self.navigation,
             self.search,
+            self.page_title,
+            self.page_description,
             self.sample
         )
     }
@@ -186,7 +256,8 @@ impl Component for MainModel {
         match message {
             MainMessage::Noop => Ok(true),
             MainMessage::Resize => {
-                self.content_bounds = content_bounds(self.window.client_size()?);
+                self.content_bounds =
+                    content_bounds(self.window.client_size()?, self.navigation.is_pane_open()?);
                 self.sample
                     .post(GallerySampleMessage::SetBounds(self.content_bounds));
                 self.layout_shell()?;
@@ -214,6 +285,15 @@ impl Component for MainModel {
                     self.route(descriptor.kind, descriptor.id).await?;
                 }
                 Ok(false)
+            }
+            MainMessage::TogglePane => {
+                let open = self.navigation.is_pane_open()?;
+                self.navigation.set_is_pane_open(!open)?;
+                self.content_bounds = content_bounds(self.window.client_size()?, !open);
+                self.sample
+                    .post(GallerySampleMessage::SetBounds(self.content_bounds));
+                self.layout_shell()?;
+                Ok(true)
             }
             MainMessage::SampleEvent(GallerySampleEvent::Output {
                 generation,
@@ -256,6 +336,8 @@ impl Component for MainModel {
         self.title_bar.render()?;
         self.navigation.render()?;
         self.search.render()?;
+        self.page_title.render()?;
+        self.page_description.render()?;
         self.sample.render()
     }
 }

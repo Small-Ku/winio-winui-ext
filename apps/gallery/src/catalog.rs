@@ -1,4 +1,6 @@
-use winio_winui_ext::{AutoSuggestBoxItemDescriptor, NavigationViewItemDescriptor};
+use winio_winui_ext::{
+    AutoSuggestBoxItemDescriptor, NavigationViewItemDescriptor, NavigationViewItemIcon,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum GallerySectionId {
@@ -37,6 +39,16 @@ impl GallerySectionId {
             Self::Collections => "Collections",
         }
     }
+
+    pub const fn icon(self) -> NavigationViewItemIcon {
+        match self {
+            Self::BasicInput => NavigationViewItemIcon::Edit,
+            Self::StatusInfo => NavigationViewItemIcon::Info,
+            Self::Text => NavigationViewItemIcon::Document,
+            Self::DialogsFlyouts => NavigationViewItemIcon::Comment,
+            Self::Collections => NavigationViewItemIcon::List,
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
@@ -63,10 +75,10 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
     GallerySampleDescriptor {
         kind: GallerySampleKind::Overview,
         id: "overview",
-        title: "Overview",
+        title: "Home",
         section: None,
         keywords: &["gallery", "samples"],
-        description: "Native WinUI extension gallery overview.",
+        description: "Browse native WinUI extension samples and shell capabilities.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ToggleButton,
@@ -140,7 +152,11 @@ pub fn search(query: &str) -> Vec<&'static GallerySampleDescriptor> {
 }
 
 pub fn navigation_items() -> Vec<NavigationViewItemDescriptor> {
-    let mut items = vec![NavigationViewItemDescriptor::new("overview", "Overview")];
+    let home = by_id("overview").expect("overview route must exist");
+    let mut items = vec![
+        NavigationViewItemDescriptor::new(home.id, home.title)
+            .with_icon(NavigationViewItemIcon::Home),
+    ];
     for section in GallerySectionId::ALL {
         let children = CATALOG
             .iter()
@@ -150,6 +166,7 @@ pub fn navigation_items() -> Vec<NavigationViewItemDescriptor> {
         if !children.is_empty() {
             items.push(
                 NavigationViewItemDescriptor::new(section.id(), section.title())
+                    .with_icon(section.icon())
                     .with_children(children),
             );
         }

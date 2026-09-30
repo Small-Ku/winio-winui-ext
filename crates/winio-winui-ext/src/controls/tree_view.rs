@@ -1,14 +1,21 @@
-use windows::Foundation::{IPropertyValue, PropertyValue, TypedEventHandler};
-use windows::core::{HSTRING, IInspectable, Interface};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
+
+use windows::Foundation::{IReference, PropertyValue, TypedEventHandler};
+use windows::core::{HSTRING, IInspectable, IUnknown, Interface};
 use winio::elm::{Component, ComponentSender};
 use winio::handle::{AsWidget, BorrowedContainer, BorrowedWidget};
 use winio::primitive::{Enable, Failable, Layoutable, Point, Size, Visible};
 use winio::{Error, Result};
-use winio_winui_bindings::Microsoft::UI::Xaml::Controls::{
-    TreeView as NativeTreeView, TreeViewExpandingEventArgs, TreeViewItemInvokedEventArgs,
-    TreeViewNode, TreeViewSelectionMode,
+use winio_winui_bindings::Microsoft::UI::Xaml::{
+    Automation::AutomationProperties,
+    Controls::{
+        TreeView as NativeTreeView, TreeViewExpandingEventArgs, TreeViewItemInvokedEventArgs,
+        TreeViewNode, TreeViewSelectionMode,
+    },
 };
-use winio_winui3::Microsoft::UI::Xaml::Controls as MUXC;
 
 use crate::native::NativeElement;
 
@@ -42,6 +49,7 @@ pub struct TreeView {
     element: NativeElement,
     item_invoked_token: i64,
     expanding_token: i64,
+    content_ids: Arc<Mutex<HashMap<usize, String>>>,
 }
 
 impl Failable for TreeView {
@@ -52,48 +60,69 @@ impl TreeView {
     pub fn set_nodes(&mut self, nodes: &[TreeViewNodeDescriptor]) -> Result<()> {
         let roots = self.native.RootNodes()?;
         roots.Clear()?;
+        self.content_ids
+            .lock()
+            .expect("tree content id map poisoned")
+            .clear();
         for node in nodes {
-            roots.Append(&build_node(node)?)?;
+            roots.Append(&build_node(node, &self.content_ids)?)?;
         }
         Ok(())
     }
 }
 
-fn build_node(descriptor: &TreeViewNodeDescriptor) -> Result<TreeViewNode> {
+fn inspectable_identity(item: &IInspectable) -> Option<usize> {
+    item.cast::<IUnknown>()
+        .ok()
+        .map(|identity| Interface::as_raw(&identity) as usize)
+}
+
+fn build_node(
+    descriptor: &TreeViewNodeDescriptor,
+    content_ids: &Arc<Mutex<HashMap<usize, String>>>,
+) -> Result<TreeViewNode> {
     let node = TreeViewNode::new()?;
-    let text = MUXC::TextBlock::new()?;
-    text.SetText(&HSTRING::from(descriptor.text.as_str()))?;
-    let id = PropertyValue::CreateString(&HSTRING::from(descriptor.id.as_str()))?;
-    text.SetTag(&id)?;
-    node.SetContent(&text)?;
+    let visible = HSTRING::from(descriptor.text.as_str());
+    let content = PropertyValue::CreateString(&visible)?.cast::<IReference<HSTRING>>()?;
+    let inspectable = content.cast::<IInspectable>()?;
+    if let Some(identity) = inspectable_identity(&inspectable) {
+        content_ids
+            .lock()
+            .expect("tree content id map poisoned")
+            .insert(identity, descriptor.id.clone());
+    }
+    node.SetContent(&content)?;
+    AutomationProperties::SetAutomationId(&node, &HSTRING::from(descriptor.id.as_str()))?;
     let children = node.Children()?;
     for child in &descriptor.children {
-        children.Append(&build_node(child)?)?;
+        children.Append(&build_node(child, content_ids)?)?;
     }
     Ok(node)
 }
 
-fn tagged_text_id(item: &IInspectable) -> Option<String> {
-    item.cast::<MUXC::TextBlock>()
-        .ok()
-        .and_then(|text| text.Tag().ok())
-        .and_then(|tag| tag.cast::<IPropertyValue>().ok())
-        .and_then(|tag| tag.GetString().ok())
-        .map(|id| id.to_string_lossy())
-}
-
 fn tree_node_id(node: &TreeViewNode) -> Option<String> {
-    node.Content()
+    AutomationProperties::GetAutomationId(node)
         .ok()
-        .and_then(|content| tagged_text_id(&content))
+        .map(|id| id.to_string_lossy())
+        .filter(|id| !id.is_empty())
 }
 
-fn invoked_item_id(item: &IInspectable) -> Option<String> {
-    tagged_text_id(item).or_else(|| {
-        item.cast::<TreeViewNode>()
-            .ok()
-            .and_then(|node| tree_node_id(&node))
-    })
+fn invoked_item_id(
+    item: &IInspectable,
+    content_ids: &Arc<Mutex<HashMap<usize, String>>>,
+) -> Option<String> {
+    item.cast::<TreeViewNode>()
+        .ok()
+        .and_then(|node| tree_node_id(&node))
+        .or_else(|| {
+            inspectable_identity(item).and_then(|identity| {
+                content_ids
+                    .lock()
+                    .expect("tree content id map poisoned")
+                    .get(&identity)
+                    .cloned()
+            })
+        })
 }
 
 impl Visible for TreeView {
@@ -163,6 +192,8 @@ impl Component for TreeView {
         let native = NativeTreeView::new()?;
         native.SetSelectionMode(TreeViewSelectionMode::Single)?;
 
+        let content_ids = Arc::new(Mutex::new(HashMap::new()));
+        let invoked_content_ids = Arc::clone(&content_ids);
         let invoked_sender = sender.clone();
         let item_invoked_token = native.ItemInvoked(&TypedEventHandler::<
             NativeTreeView,
@@ -171,7 +202,7 @@ impl Component for TreeView {
             let id = args
                 .as_ref()
                 .and_then(|args| args.InvokedItem().ok())
-                .and_then(|item| invoked_item_id(&item));
+                .and_then(|item| invoked_item_id(&item, &invoked_content_ids));
             invoked_sender.output(TreeViewEvent::ItemInvoked { id });
             Ok(())
         }))?;
@@ -197,6 +228,7 @@ impl Component for TreeView {
             element,
             item_invoked_token,
             expanding_token,
+            content_ids,
         })
     }
 }

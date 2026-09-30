@@ -78,6 +78,75 @@ try {
     $section = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::ListItem) 'Basic input') 'NavigationView section hierarchy'
     $search = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'AutoSuggestBox')) 'catalog AutoSuggestBox'
 
+    $titleRect = $titleBar.Current.BoundingRectangle
+    $searchRect = $search.Current.BoundingRectangle
+    if ($searchRect.Top -lt ($titleRect.Top - 4) -or $searchRect.Bottom -gt ($titleRect.Bottom + 4)) {
+        throw "AutoSuggestBox escaped the integrated TitleBar band: title=$titleRect search=$searchRect."
+    }
+    $legacyPaneToggle = $window.FindFirst($descendants, [System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'TogglePaneButton'))
+    if ($null -ne $legacyPaneToggle -and -not $legacyPaneToggle.Current.IsOffscreen) {
+        throw 'NavigationView exposed its own pane toggle instead of delegating shell chrome to TitleBar.'
+    }
+    $titlePaneToggle = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'PART_PaneToggleButton')) 'TitleBar pane toggle'
+    $pane = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'PaneRoot')) 'NavigationView pane root'
+    $expandedPaneWidth = $pane.Current.BoundingRectangle.Width
+    $homeTexts = $window.FindAll($descendants, (Condition ([System.Windows.Automation.ControlType]::Text) 'Home'))
+    $expandedPageHome = $null
+    for ($i = 0; $i -lt $homeTexts.Count; $i++) {
+        $candidate = $homeTexts.Item($i)
+        if (-not $candidate.Current.IsOffscreen -and ($null -eq $expandedPageHome -or $candidate.Current.BoundingRectangle.Left -gt $expandedPageHome.Current.BoundingRectangle.Left)) {
+            $expandedPageHome = $candidate
+        }
+    }
+    if ($null -eq $expandedPageHome) { throw 'Expanded Gallery page header Home was not found.' }
+    $expandedPageHomeLeft = $expandedPageHome.Current.BoundingRectangle.Left
+    ([System.Windows.Automation.InvokePattern]$titlePaneToggle.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $deadline = [DateTime]::UtcNow.AddSeconds(4)
+    do {
+        Start-Sleep -Milliseconds 50
+        $pane = $window.FindFirst($descendants, [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'PaneRoot'))
+        $compactPaneWidth = if ($null -eq $pane) { 0 } else { $pane.Current.BoundingRectangle.Width }
+        if ($compactPaneWidth -lt ($expandedPaneWidth * 0.5)) { break }
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($compactPaneWidth -ge ($expandedPaneWidth * 0.5)) { throw "TitleBar pane toggle did not compact NavigationView: expanded=$expandedPaneWidth compact=$compactPaneWidth." }
+    $homeTexts = $window.FindAll($descendants, (Condition ([System.Windows.Automation.ControlType]::Text) 'Home'))
+    $compactPageHome = $null
+    for ($i = 0; $i -lt $homeTexts.Count; $i++) {
+        $candidate = $homeTexts.Item($i)
+        if (-not $candidate.Current.IsOffscreen -and ($null -eq $compactPageHome -or $candidate.Current.BoundingRectangle.Left -gt $compactPageHome.Current.BoundingRectangle.Left)) {
+            $compactPageHome = $candidate
+        }
+    }
+    if ($null -eq $compactPageHome) { throw 'Compact Gallery page header Home was not found.' }
+    $compactPageHomeLeft = $compactPageHome.Current.BoundingRectangle.Left
+    if ($compactPageHomeLeft -ge ($expandedPageHomeLeft - 100)) {
+        throw "Gallery content did not reclaim compact-pane width: expandedHomeX=$expandedPageHomeLeft compactHomeX=$compactPageHomeLeft."
+    }
+    ([System.Windows.Automation.InvokePattern]$titlePaneToggle.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $deadline = [DateTime]::UtcNow.AddSeconds(4)
+    do {
+        Start-Sleep -Milliseconds 50
+        $pane = $window.FindFirst($descendants, [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'PaneRoot'))
+        $reopenedPaneWidth = if ($null -eq $pane) { 0 } else { $pane.Current.BoundingRectangle.Width }
+        if ($reopenedPaneWidth -ge ($expandedPaneWidth * 0.9)) { break }
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($reopenedPaneWidth -lt ($expandedPaneWidth * 0.9)) { throw "TitleBar pane toggle did not reopen NavigationView: expanded=$expandedPaneWidth reopened=$reopenedPaneWidth." }
+    $homeTexts = $window.FindAll($descendants, (Condition ([System.Windows.Automation.ControlType]::Text) 'Home'))
+    $reopenedPageHome = $null
+    for ($i = 0; $i -lt $homeTexts.Count; $i++) {
+        $candidate = $homeTexts.Item($i)
+        if (-not $candidate.Current.IsOffscreen -and ($null -eq $reopenedPageHome -or $candidate.Current.BoundingRectangle.Left -gt $reopenedPageHome.Current.BoundingRectangle.Left)) {
+            $reopenedPageHome = $candidate
+        }
+    }
+    if ($null -eq $reopenedPageHome) { throw 'Reopened Gallery page header Home was not found.' }
+    if ([Math]::Abs($reopenedPageHome.Current.BoundingRectangle.Left - $expandedPageHomeLeft) -gt 12) {
+        throw "Gallery content did not restore after pane reopen: expandedHomeX=$expandedPageHomeLeft reopenedHomeX=$($reopenedPageHome.Current.BoundingRectangle.Left)."
+    }
+
     Select-NavigationSample $window 'Basic input' 'ToggleButton'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ToggleButton'
     $toggle = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Native WinUI ToggleButton') 'routed ToggleButton'
@@ -161,7 +230,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: integrated TitleBar and caption Close; catalog NavigationView hierarchy; NavigationView ToggleButton route/output '$toggleOutput'; AutoSuggestBox ValuePattern + InvokePattern NumberBox route; old ToggleButton UIA peer removed; NumberBox RangeValue 10→42; InfoBar canary visible; TreeView root expansion/leaf invoke outputs; TeachingTip target, native popup CloseButton, popup removal, and close-reason output."
+    Write-Output "PASS: integrated TitleBar search/pane chrome and caption Close; catalog NavigationView hierarchy; NavigationView ToggleButton route/output '$toggleOutput'; AutoSuggestBox ValuePattern + InvokePattern NumberBox route; old ToggleButton UIA peer removed; NumberBox RangeValue 10→42; InfoBar canary visible; TreeView root expansion/leaf invoke outputs; TeachingTip target, native popup CloseButton, popup removal, and close-reason output."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {
