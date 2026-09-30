@@ -64,6 +64,7 @@ pub enum GallerySampleKind {
     Expander,
     InfoBar,
     NumberBox,
+    RatingControl,
     TeachingTip,
     TreeView,
 }
@@ -126,6 +127,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["number", "numeric", "spin"],
         description: "Native NumberBox with range and inline spin buttons.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::RatingControl,
+        id: "rating-control",
+        title: "RatingControl",
+        section: Some(GallerySectionId::BasicInput),
+        keywords: &["rating", "stars", "score", "value"],
+        description: "Native RatingControl with typed value changes.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::TeachingTip,
@@ -229,6 +238,10 @@ mod tests {
         assert_eq!(
             by_id("expander").unwrap().section,
             Some(GallerySectionId::Layout)
+        );
+        assert_eq!(
+            by_id("rating-control").unwrap().section,
+            Some(GallerySectionId::BasicInput)
         );
         assert_eq!(
             by_id("info-bar").unwrap().section,

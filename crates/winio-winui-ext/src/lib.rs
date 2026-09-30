@@ -11,6 +11,7 @@ mod controls {
     mod integrated_title_bar;
     mod navigation_view;
     mod number_box;
+    mod rating_control;
     mod teaching_tip;
     mod toggle_button;
     mod toggle_switch;
@@ -31,6 +32,7 @@ mod controls {
         NavigationViewMessage, NavigationViewPaneDisplayMode,
     };
     pub use number_box::{NumberBox, NumberBoxEvent, NumberBoxMessage, NumberBoxSpinPlacement};
+    pub use rating_control::{RatingControl, RatingControlEvent, RatingControlMessage};
     pub use teaching_tip::{
         TeachingTip, TeachingTipCloseReason, TeachingTipEvent, TeachingTipMessage,
         TeachingTipPlacement,
