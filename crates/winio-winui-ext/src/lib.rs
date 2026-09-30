@@ -12,6 +12,7 @@ mod controls {
     mod number_box;
     mod teaching_tip;
     mod toggle_button;
+    mod toggle_switch;
     mod tree_view;
 
     pub use auto_suggest_box::{
@@ -33,6 +34,7 @@ mod controls {
         TeachingTipPlacement,
     };
     pub use toggle_button::{ToggleButton, ToggleButtonEvent, ToggleButtonMessage};
+    pub use toggle_switch::{ToggleSwitch, ToggleSwitchEvent, ToggleSwitchMessage};
     pub use tree_view::{TreeView, TreeViewEvent, TreeViewMessage, TreeViewNodeDescriptor};
 }
 

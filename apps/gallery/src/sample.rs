@@ -43,6 +43,11 @@ pub async fn create_sample(
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::ToggleSwitch => {
+            Child::<samples::toggle_switch::ToggleSwitchSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::InfoBar => Child::<samples::info_bar::InfoBarSample>::init(init)
             .await?
             .into_boxed(),

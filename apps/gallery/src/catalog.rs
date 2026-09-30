@@ -55,6 +55,7 @@ impl GallerySectionId {
 pub enum GallerySampleKind {
     Overview,
     ToggleButton,
+    ToggleSwitch,
     InfoBar,
     NumberBox,
     TeachingTip,
@@ -87,6 +88,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["toggle", "button", "nullable", "state"],
         description: "Three-state native ToggleButton.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::ToggleSwitch,
+        id: "toggle-switch",
+        title: "ToggleSwitch",
+        section: Some(GallerySectionId::BasicInput),
+        keywords: &["toggle", "switch", "boolean", "state"],
+        description: "Native ToggleSwitch with typed on/off events.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::InfoBar,
@@ -197,6 +206,10 @@ mod tests {
         );
         assert_eq!(
             by_id("number-box").unwrap().section,
+            Some(GallerySectionId::BasicInput)
+        );
+        assert_eq!(
+            by_id("toggle-switch").unwrap().section,
             Some(GallerySectionId::BasicInput)
         );
         assert_eq!(

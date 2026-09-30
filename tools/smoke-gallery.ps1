@@ -430,6 +430,25 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($basicSourceState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'Card B source did not collapse independently.' }
 
+    Select-NavigationSample $window 'Basic input' 'ToggleSwitch'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ToggleSwitch'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'ToggleSwitch route did not keep one page-level ScrollViewer.' }
+    $switchCondition = [System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'ToggleSwitch'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Wi-Fi'))
+    $toggleSwitch = Wait-Element $window $switchCondition 'native ToggleSwitch'
+    $toggleSwitchPattern = [System.Windows.Automation.TogglePattern]$toggleSwitch.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    if ($toggleSwitchPattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'ToggleSwitch did not start off.' }
+    $toggleSwitchPattern.Toggle()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample toggle-switch: on'
+    $toggleSwitchOutput = Wait-Text $window 'on'
+    $toggleSwitch = Wait-Element $window $switchCondition 'native ToggleSwitch after on state'
+    $toggleSwitchPattern = [System.Windows.Automation.TogglePattern]$toggleSwitch.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    if ($toggleSwitchPattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::On) { throw 'ToggleSwitch UIA state did not become on.' }
+    $toggleSwitchPattern.Toggle()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample toggle-switch: off'
+    $toggleSwitchOutput = Wait-Text $window 'off'
     $search = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'AutoSuggestBox')) 'AutoSuggestBox after sample route'
     $edit = Wait-Element $search (TypeCondition ([System.Windows.Automation.ControlType]::Edit)) 'AutoSuggestBox edit'
     ([System.Windows.Automation.ValuePattern]$edit.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)).SetValue('NumberBox')
@@ -556,7 +575,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; InfoBar; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; InfoBar; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {
