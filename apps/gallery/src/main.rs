@@ -143,7 +143,8 @@ impl Component for MainModel {
             },
             self.info_bar => {},
             self.navigation => {
-                NavigationViewEvent::SelectionChanged { selected_id } => MainMessage::NavigationSelected(selected_id),
+                NavigationViewEvent::SelectionChanged { selected_id, .. } => MainMessage::NavigationSelected(selected_id),
+                NavigationViewEvent::BackRequested => MainMessage::Noop,
             },
             self.number => {
                 NumberBoxEvent::ValueChanged { old_value: _, new_value } => MainMessage::NumberChanged(new_value),

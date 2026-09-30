@@ -5,6 +5,7 @@
 mod native;
 
 mod controls {
+    mod auto_suggest_box;
     mod info_bar;
     mod integrated_title_bar;
     mod navigation_view;
@@ -13,12 +14,17 @@ mod controls {
     mod toggle_button;
     mod tree_view;
 
+    pub use auto_suggest_box::{
+        AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxItemDescriptor, AutoSuggestBoxMessage,
+        AutoSuggestBoxTextChangeReason,
+    };
     pub use info_bar::{InfoBar, InfoBarMessage};
     pub use integrated_title_bar::{
         IntegratedTitleBar, IntegratedTitleBarInit, IntegratedTitleBarMessage,
     };
     pub use navigation_view::{
         NavigationView, NavigationViewEvent, NavigationViewItemDescriptor, NavigationViewMessage,
+        NavigationViewPaneDisplayMode,
     };
     pub use number_box::{NumberBox, NumberBoxEvent, NumberBoxMessage, NumberBoxSpinPlacement};
     pub use teaching_tip::{

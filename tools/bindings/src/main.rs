@@ -54,6 +54,80 @@ struct SanitizeStats {
 
 const WRAPPER_CONTRACTS: &[WrapperContract] = &[
     WrapperContract {
+        name: "AutoSuggestBox",
+        runtime_type: "Microsoft.UI.Xaml.Controls.AutoSuggestBox",
+        required_methods: &[
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn new()",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn Text(",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn SetText(",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn PlaceholderText(",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn SetPlaceholderText(",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn IsSuggestionListOpen(",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn SetIsSuggestionListOpen(",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn TextChanged<",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn RemoveTextChanged(",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn SuggestionChosen<",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn RemoveSuggestionChosen(",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn QuerySubmitted<",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBox",
+                fragment: "pub fn RemoveQuerySubmitted(",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBoxQuerySubmittedEventArgs",
+                fragment: "pub fn QueryText(",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBoxQuerySubmittedEventArgs",
+                fragment: "pub fn ChosenSuggestion(",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBoxSuggestionChosenEventArgs",
+                fragment: "pub fn SelectedItem(",
+            },
+            RequiredMethod {
+                type_name: "AutoSuggestBoxTextChangedEventArgs",
+                fragment: "pub fn Reason(",
+            },
+        ],
+    },
+    WrapperContract {
         name: "InfoBar",
         runtime_type: "Microsoft.UI.Xaml.Controls.InfoBar",
         required_methods: &[
@@ -93,6 +167,34 @@ const WRAPPER_CONTRACTS: &[WrapperContract] = &[
             },
             RequiredMethod {
                 type_name: "NavigationView",
+                fragment: "pub fn FooterMenuItems(",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn SetSelectedItem<",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn SetHeader<",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn IsSettingsVisible(",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn SetIsSettingsVisible(",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn BackRequested<",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
+                fragment: "pub fn RemoveBackRequested(",
+            },
+            RequiredMethod {
+                type_name: "NavigationView",
                 fragment: "pub fn SelectionChanged<",
             },
             RequiredMethod {
@@ -122,6 +224,10 @@ const WRAPPER_CONTRACTS: &[WrapperContract] = &[
             RequiredMethod {
                 type_name: "NavigationViewItem",
                 fragment: "pub fn SelectsOnInvoked(",
+            },
+            RequiredMethod {
+                type_name: "NavigationViewItem",
+                fragment: "pub fn MenuItems(",
             },
             RequiredMethod {
                 type_name: "NavigationViewItem",
