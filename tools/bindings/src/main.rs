@@ -199,6 +199,60 @@ const WRAPPER_CONTRACTS: &[WrapperContract] = &[
             },
         ],
     },
+    WrapperContract {
+        name: "TreeView",
+        runtime_type: "Microsoft.UI.Xaml.Controls.TreeView",
+        required_methods: &[
+            RequiredMethod {
+                type_name: "TreeView",
+                fragment: "pub fn RootNodes(",
+            },
+            RequiredMethod {
+                type_name: "TreeView",
+                fragment: "pub fn SetSelectionMode(",
+            },
+            RequiredMethod {
+                type_name: "TreeView",
+                fragment: "pub fn ItemInvoked<",
+            },
+            RequiredMethod {
+                type_name: "TreeView",
+                fragment: "pub fn RemoveItemInvoked(",
+            },
+            RequiredMethod {
+                type_name: "TreeView",
+                fragment: "pub fn Expanding<",
+            },
+            RequiredMethod {
+                type_name: "TreeView",
+                fragment: "pub fn RemoveExpanding(",
+            },
+            RequiredMethod {
+                type_name: "TreeViewNode",
+                fragment: "pub fn Content(",
+            },
+            RequiredMethod {
+                type_name: "TreeViewNode",
+                fragment: "pub fn SetContent<",
+            },
+            RequiredMethod {
+                type_name: "TreeViewNode",
+                fragment: "pub fn Children(",
+            },
+            RequiredMethod {
+                type_name: "TreeViewNode",
+                fragment: "pub fn new()",
+            },
+            RequiredMethod {
+                type_name: "TreeViewItemInvokedEventArgs",
+                fragment: "pub fn InvokedItem(",
+            },
+            RequiredMethod {
+                type_name: "TreeViewExpandingEventArgs",
+                fragment: "pub fn Node(",
+            },
+        ],
+    },
 ];
 
 #[derive(Debug)]

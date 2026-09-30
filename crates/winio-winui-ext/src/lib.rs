@@ -9,6 +9,7 @@ mod controls {
     mod navigation_view;
     mod number_box;
     mod toggle_button;
+    mod tree_view;
 
     pub use info_bar::{InfoBar, InfoBarMessage};
     pub use navigation_view::{
@@ -16,6 +17,7 @@ mod controls {
     };
     pub use number_box::{NumberBox, NumberBoxEvent, NumberBoxMessage, NumberBoxSpinPlacement};
     pub use toggle_button::{ToggleButton, ToggleButtonEvent, ToggleButtonMessage};
+    pub use tree_view::{TreeView, TreeViewEvent, TreeViewMessage, TreeViewNodeDescriptor};
 }
 
 pub use controls::*;
