@@ -23,24 +23,24 @@ function Condition($Type, [string]$Name) {
 function TypeCondition($Type) {
     return [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, $Type)
 }
-function Find-MainWindow($ProcessCondition) {
+function Find-MainWindow($Process) {
     try {
-        $windows = $root.FindAll($children, $ProcessCondition)
+        $Process.Refresh()
+        $handle = $Process.MainWindowHandle
+        if ($handle -eq [IntPtr]::Zero) { return $null }
+        $candidate = $automation::FromHandle($handle)
     } catch {
-        # UI Automation can transiently time out while WinUI rebuilds its peer tree.
+        # UI Automation can transiently fail while WinUI creates or rebuilds its window peer.
         return $null
     }
-    for ($i = 0; $i -lt $windows.Count; $i++) {
-        $candidate = $windows.Item($i)
-        if ($candidate.Current.Name -like 'Winio WinUI Extensions*') { return $candidate }
-    }
+    if ($candidate.Current.Name -like 'Winio WinUI Extensions*') { return $candidate }
     return $null
 }
 function Wait-MainTitle($Process, $ProcessCondition, [string]$Expected) {
     $deadline = [DateTime]::UtcNow.AddSeconds(12)
     do {
         if ($Process.HasExited) { throw "Gallery exited while waiting for '$Expected' (exit code $($Process.ExitCode))." }
-        $window = Find-MainWindow $ProcessCondition
+        $window = Find-MainWindow $Process
         if ($null -ne $window -and $window.Current.Name -eq $Expected) { return $window }
         Start-Sleep -Milliseconds 100
     } while ([DateTime]::UtcNow -lt $deadline)
@@ -51,16 +51,21 @@ function Wait-MainWindow($Process, $ProcessCondition) {
     $deadline = [DateTime]::UtcNow.AddSeconds(12)
     do {
         if ($Process.HasExited) { throw "Gallery exited during UIA discovery (exit code $($Process.ExitCode))." }
-        $window = Find-MainWindow $ProcessCondition
+        $window = Find-MainWindow $Process
         if ($null -ne $window) { return $window }
         Start-Sleep -Milliseconds 100
     } while ([DateTime]::UtcNow -lt $deadline)
     throw 'Timed out discovering the Gallery main window.'
 }
 function Wait-Element($Window, $Condition, [string]$Description) {
-    $deadline = [DateTime]::UtcNow.AddSeconds(8)
+    $deadline = [DateTime]::UtcNow.AddSeconds(15)
     do {
-        $element = $Window.FindFirst($descendants, $Condition)
+        try {
+            $element = $Window.FindFirst($descendants, $Condition)
+        } catch {
+            # WinUI may temporarily recreate a peer while the routed sample updates.
+            $element = $null
+        }
         if ($null -ne $element) { return $element }
         Start-Sleep -Milliseconds 100
     } while ([DateTime]::UtcNow -lt $deadline)
@@ -341,7 +346,7 @@ try {
     ([System.Windows.Automation.TogglePattern]$toggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
     $deadline = [DateTime]::UtcNow.AddSeconds(8)
     do {
-        $window = Find-MainWindow $pc
+        $window = Find-MainWindow $process
         if ($null -ne $window -and $window.Current.Name -match '^Winio WinUI Extensions — sample toggle-button: (checked|unchecked|indeterminate)$') { break }
         Start-Sleep -Milliseconds 100
     } while ([DateTime]::UtcNow -lt $deadline)
@@ -637,6 +642,27 @@ try {
     $pausePattern.Toggle()
     $null = Wait-Text $window 'wide · unpaused'
     if ($pausePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'TwoPaneView child did not toggle progress back to unpaused.' }
+    Select-NavigationSample $window 'Layout' 'SplitView'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — SplitView'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'SplitView route did not keep one page-level ScrollViewer.' }
+    $splitToggle = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Toggle pane') 'Winio pane state control'
+    $splitTogglePattern = [System.Windows.Automation.TogglePattern]$splitToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    if ($splitTogglePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'SplitView sample did not start with its pane closed.' }
+    $splitTogglePattern.Toggle()
+    $null = Wait-Text $window 'opening|opened'
+    $paneRegion = Wait-Text $window 'Pane region'
+    if ($paneRegion.Current.IsOffscreen) { throw 'SplitView pane content remained offscreen after opening.' }
+    $mainRegion = Wait-Text $window 'Main content remains in place'
+    if ($mainRegion.Current.IsOffscreen) { throw 'SplitView main content was not visible with the pane open.' }
+    $splitToggle = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Toggle pane') 'Winio pane state control after opening'
+    $splitTogglePattern = [System.Windows.Automation.TogglePattern]$splitToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    if ($splitTogglePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::On) { throw 'SplitView sample toggle did not report the open state.' }
+    $splitTogglePattern.Toggle()
+    $null = Wait-Text $window 'opening|opened|closing|closed'
+    $mainRegion = Wait-Text $window 'Main content remains in place'
+    if ($mainRegion.Current.IsOffscreen) { throw 'SplitView main content became hidden when the overlay pane closed.' }
+    $paneRegion = $window.FindFirst($descendants, (Condition ([System.Windows.Automation.ControlType]::Text) 'Pane region'))
+    if ($null -ne $paneRegion -and -not $paneRegion.Current.IsOffscreen) { throw 'SplitView pane content remained visible after closing the overlay pane.' }
     Select-NavigationSample $window 'Layout' 'Viewbox'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — Viewbox'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'Viewbox route did not keep one page-level ScrollViewer.' }
@@ -1075,7 +1101,7 @@ try {
     ([System.Windows.Automation.SelectionItemPattern]$detailTab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample tab-view: selected:details'
 
-        Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ProgressRing RangeValue 65 + indeterminate option round-trip; ProgressBar RangeValue 65 + indeterminate round-trip; TwoPaneView pane child + paused state round-trip; Viewbox scales Winio-owned Canvas content; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; ToggleSplitButton checked state and independent owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBadge value getter round-trip; RadioButtons SelectionItemPattern stable ID; SelectorBar SelectionItemPattern stable ID; TabView descriptor ID selection + typed event with inert add/close chrome hidden; InfoBar; PipsPager Next/Previous stable selected-index events; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
+        Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ProgressRing RangeValue 65 + indeterminate option round-trip; ProgressBar RangeValue 65 + indeterminate round-trip; TwoPaneView pane child + paused state round-trip; SplitView native pane lifecycle and UIA visibility; Viewbox scales Winio-owned Canvas content; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; ToggleSplitButton checked state and independent owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBadge value getter round-trip; RadioButtons SelectionItemPattern stable ID; SelectorBar SelectionItemPattern stable ID; TabView descriptor ID selection + typed event with inert add/close chrome hidden; InfoBar; PipsPager Next/Previous stable selected-index events; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

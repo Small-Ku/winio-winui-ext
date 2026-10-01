@@ -87,6 +87,7 @@ pub enum GallerySampleKind {
     RatingControl,
     RadioButtons,
     SplitButton,
+    SplitView,
     SelectorBar,
     TeachingTip,
     TimePicker,
@@ -178,6 +179,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::Layout),
         keywords: &["layout", "panes", "adaptive", "split"],
         description: "Adaptive two-pane layout with wrapper-owned Winio pane containers.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::SplitView,
+        id: "split-view",
+        title: "SplitView",
+        section: Some(GallerySectionId::Layout),
+        keywords: &["pane", "content", "layout", "overlay", "inline"],
+        description: "Native two-region pane/content layout with typed pane lifecycle events.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::Viewbox,
@@ -459,6 +468,10 @@ mod tests {
             Some(GallerySectionId::Layout)
         );
         assert_eq!(
+            by_id("split-view").unwrap().section,
+            Some(GallerySectionId::Layout)
+        );
+        assert_eq!(
             by_id("viewbox").unwrap().section,
             Some(GallerySectionId::Layout)
         );
@@ -550,6 +563,7 @@ mod tests {
             ("info-badge", GallerySampleKind::InfoBadge),
             ("progress-bar", GallerySampleKind::ProgressBar),
             ("two-pane-view", GallerySampleKind::TwoPaneView),
+            ("split-view", GallerySampleKind::SplitView),
             ("viewbox", GallerySampleKind::Viewbox),
             ("tab-view", GallerySampleKind::TabView),
             ("toggle-split-button", GallerySampleKind::ToggleSplitButton),

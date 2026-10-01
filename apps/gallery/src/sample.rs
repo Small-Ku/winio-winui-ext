@@ -145,6 +145,9 @@ pub async fn create_sample(
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::SplitView => Child::<samples::split_view::SplitViewSample>::init(init)
+            .await?
+            .into_boxed(),
         GallerySampleKind::TimePicker => {
             Child::<samples::time_picker::TimePickerSample>::init(init)
                 .await?

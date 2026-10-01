@@ -20,6 +20,7 @@ pub mod radio_buttons;
 pub mod rating_control;
 pub mod selector_bar;
 pub mod split_button;
+pub mod split_view;
 pub mod tab_view;
 pub mod teaching_tip;
 pub mod time_picker;

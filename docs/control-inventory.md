@@ -15,9 +15,9 @@ Projection availability alone is not wrapper completeness or proof that every na
 | Button | `Button`, `Primitives::ToggleButton` | ToggleButton is the current upstream-backed extension wrapper. |
 | Check box / radio button | `CheckBox`, `RadioButton` | Upstream projected. |
 | Combo box / list box | `ComboBox`, `ListBox` | Upstream projected. |
-| Edit / text box / label / link label | `TextBox`, `PasswordBox`, `TextBlock`, `HyperlinkButton` | HyperlinkButton remains a possible native link wrapper. |
+| Edit / text box / label / link label | `TextBox`, `PasswordBox`, `TextBlock`, `HyperlinkButton` | Winio's `LinkLabel` uses the native `HyperlinkButton`; the existing high-level link widget already covers this behavior. |
 | Progress / slider / scroll bar | `ProgressBar`, `Slider`, `Primitives::ScrollBar` | Upstream projected. |
-| Scroll view / canvas / tab view | `ScrollViewer`, `Canvas`, `TabView` | Upstream projected. |
+| Scroll view / canvas / tab view | `ScrollViewer`, `Canvas`, `TabView` | Winio's high-level ScrollView is backed by `ScrollViewer`; see the separate native ScrollView parity note below. |
 | View | `Canvas` as the backend host surface | A hosting surface, not a stand-alone view equivalent. |
 | Window / media / web view / WGPU | `Xaml::Window`, `MediaPlayerElement`, `WebView2`, `SwapChainPanel` | Upstream projected, but these have broader lifecycle/runtime integration needs. |
 
@@ -44,7 +44,7 @@ The following examples are absent as public control structs from the compatible 
 - `ProgressRing`, `RatingControl`, `SplitButton`, `DropDownButton`
 - `BreadcrumbBar`, `InfoBadge`, `RadioButtons`, `SelectorBar`
 - `TwoPaneView`
-- `ToggleSplitButton`, `Viewbox`
+- `SplitView`, `ToggleSplitButton`, `Viewbox`
 - `SwipeControl`, `SwipeItem`, `SwipeItems`
 
 This list demonstrates supplemental projection availability; it is not a wrapper roadmap promise. The broad generator also follows required dependencies outside the root namespace where bindgen proves they are needed. It does not generate the entire Microsoft metadata universe.
@@ -77,7 +77,8 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 | `ProgressRing` | supplemental | Active/indeterminate state and determinate minimum/maximum/value. Gallery UIA verifies native RangeValue `65`, toggles the live Indeterminate option on and back off, and observes the sample output change. |
 | `ProgressBar` | upstream `winio-winui3` | Determinate/indeterminate, minimum/maximum/value, error and paused states. Gallery UIA verifies native RangeValue `65` and toggles indeterminate state in the running control. |
 | `TwoPaneView` | supplemental | Owns two native Canvas pane containers for Winio children; exposes adaptive mode/configuration, pane priority, and width/height thresholds. Gallery hosts Winio controls in both panes and toggles native paused progress state. |
-| `Viewbox` | supplemental | Owns a Canvas for Winio children and exposes stretch/content sizing. Gallery UIA checks the Winio child bounds after native scaling (360×180 content into a 240×120 host). |
+| `SplitView` | supplemental | Owns separate Pane and Content Canvas hosts; exposes open/display/placement/length state and typed opening/opened/closing/closed events. Gallery UIA closes and reopens the native pane and observes the ordered lifecycle events. |
+| `Viewbox` | supplemental | Owns a Canvas without imposing a hidden extent; callers set content size when they need the Canvas to have a measurable native extent. Exposes stretch and stretch-direction configuration. Gallery sets 360×180 content and UIA observes the scaled child in a 240×120 host. |
 | `TabView` | upstream `winio-winui3` | Owns its `TabViewItem` instances, stores stable IDs separately from visible titles, preserves selection by ID when replacing descriptors, validates selected indexes, and emits typed selection changes. Gallery UIA selects a tab by its descriptor-derived AutomationId. |
 | `RatingControl` | supplemental | Value, max rating, read-only/clear settings, caption and typed value-change events; Gallery UIA verifies native RangeValue 3→4 with max 5. |
 | `SplitButton` | supplemental | Native primary `Click` event plus explicit flyout container; Winio children are created under the flyout Canvas, with flyout open/close events and UIA invoke/expand-collapse coverage. |
@@ -92,17 +93,16 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 | Control | Classification | Reason |
 | --- | --- | --- |
 | `HyperlinkButton` | Already covered by Winio | Winio's `LinkLabel` is implemented with the native WinUI `HyperlinkButton`; an extension wrapper would duplicate the high-level widget. |
-| `RepeatButton` | Deferred: input evidence | Its distinct behavior is repeated `Click` while a pointer remains pressed. The current UIA smoke can invoke once but has no held-pointer input driver to prove repeat timing. |
-| `SplitView` | Already covered by existing shell controls | Its pane/navigation shell role is covered by the Gallery's `NavigationView` and integrated `TitleBar`; a second shell wrapper does not add a distinct downstream control primitive in this sweep. |
-| `RelativePanel` | Deferred: layout ownership | Correct use depends on relationships between already-hosted XAML children. The current Winio host inserts widgets into its Canvas, and moving them into a RelativePanel would violate the single-parent ownership rule; a panel-owned child construction API needs a reusable relationship model. |
+| `RepeatButton` | Native behavior deferred: input evidence | Wrapper construction is bounded, but its defining behavior is repeated `Click` while pressed. UIA Invoke proves only one click; this repo has no press-and-hold driver to prove repeat semantics. |
+| `RelativePanel` | Not appropriate for current layout model | Winio positions children itself. A relationship-oriented panel API would need to own child arrangement and express sibling/panel constraints; a thin wrapper with stringly attached properties would conflict with Winio layout and provide an unsafe contract. |
 | `CalendarView` | Deferred: native date selection contract | It is a full inline calendar rather than a popup picker, but its selected-date vector, range, blackout dates, and item realization surface need an explicit bounded contract and runtime selection evidence beyond the existing CalendarDatePicker's popup calendar. |
-| `ToolTip` | Deferred: attached-property ownership | Native ToolTip is attached to another element and has hover/press timing; the existing smoke harness cannot reliably prove the attached popup lifecycle without adding input/timing support. |
+| `ToolTip` | Already covered by Winio | Winio exposes the `ToolTip` trait and the WinUI backend implements it through `ToolTipService` on ordinary widgets; no separate control wrapper is needed for normal tooltip behavior. |
 | `Pivot` | Deferred: collection and design guidance | It owns a collection of pivot items and is explicitly discouraged by current Gallery metadata in favor of SelectorBar. |
-| `AppBarButton`, `AppBarToggleButton`, `AppBarSeparator` | Covered by `CommandBar` descriptors | The existing descriptor-backed CommandBar already owns native AppBarButton actions. Separate wrappers would duplicate its action model; toggle/separator-specific extensions need a concrete consumer gap. |
+| `AppBarButton`, `AppBarToggleButton`, `AppBarSeparator` | No separate wrapper needed in current surface | `CommandBar` descriptors already own `AppBarButton` actions. A toggle or separator-specific contract may be useful later, but this sweep has no distinct behavior request beyond those descriptors. |
 | `MenuFlyout`, `CommandBarFlyout` | Deferred: popup/item ownership | They require stable-ID flyout item ownership and invocation-token lifecycle that is not provided by the existing single-content DropDownButton/SplitButton flyout hosts. |
-| `Image` | Deferred: source/resource contract | A wrapper needs an explicit source model and ownership behavior for URI, bitmap, and stream-backed image sources; introducing an ad hoc source/resource type is outside this mechanical pass. |
+| `Image` | Native parity enhancement deferred: source/resources | Winio Canvas/DrawingImage covers raster drawing. A native Image element would add element-level stretch and source semantics, but URI, bitmap, and stream source ownership need a coherent contract first. |
 | `RichEditBox` | Deferred: incomplete document contract | A text-only wrapper would expose editing while hiding document formatting, hyperlinks, and image behavior, producing an incomplete public surface. |
-| `ScrollView` | Deferred: input/runtime evidence | The native control's useful distinction is pan/zoom and ScrollController state/events; this needs input and controller coverage beyond the current page ScrollViewer host. |
+| `ScrollView` | Base coverage in Winio; native parity deferred | Winio already provides a ScrollView backed by WinUI ScrollViewer. The Gallery's Microsoft.UI.Xaml.Controls.ScrollView adds pan/zoom and ScrollController semantics that are not represented by that base component and need separate input/controller coverage. |
 | `PagerControl` | Deferred: projection boundary | Current Gallery metadata describes numbered page navigation, but the shared supplemental projection does not currently export the type; adding a per-control bindgen filter would violate the projection rule for this sweep. |
 | `PullToRefresh` | Deferred: input/lifecycle evidence | Its defining behavior is a touch pull gesture that runs a refresh lifecycle against a collection; the current smoke has no touch-gesture driver. |
 | `TableView` | Deferred: collection/virtualization ABI | It combines virtualized rows, stable row selection, editable cells, sorting, grouping, and columns, which requires the bindable collection/item realization contract excluded from this pass. |
