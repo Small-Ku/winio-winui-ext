@@ -84,6 +84,11 @@ pub async fn create_sample(
         GallerySampleKind::NumberBox => Child::<samples::number_box::NumberBoxSample>::init(init)
             .await?
             .into_boxed(),
+        GallerySampleKind::PasswordBox => {
+            Child::<samples::password_box::PasswordBoxSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::PersonPicture => {
             Child::<samples::person_picture::PersonPictureSample>::init(init)
                 .await?

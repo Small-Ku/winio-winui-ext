@@ -709,6 +709,18 @@ try {
         $automation::AutomationIdProperty, 'HexTextBox')) 'ColorPicker HexTextBox after edit'
     $hexValue = [System.Windows.Automation.ValuePattern]$hexInput.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
     if ($hexValue.Current.Value -ne '#112233') { throw "ColorPicker edited hex value was '$($hexValue.Current.Value)'." }
+    Select-NavigationSample $window 'Basic input' 'PasswordBox'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — PasswordBox'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'PasswordBox route did not keep one page-level ScrollViewer.' }
+    $passwordBox = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'PasswordBox'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Password'))) 'native PasswordBox'
+    if (-not $passwordBox.Current.IsPassword) { throw 'PasswordBox exposed the password field without IsPassword.' }
+    $passwordValue = [System.Windows.Automation.ValuePattern]$passwordBox.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    $passwordValue.SetValue('secret42')
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample password-box: password length:8'
+    $passwordOutput = Wait-Text $window 'password length:8'
     Select-NavigationSample $window 'Basic input' 'TimePicker'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — TimePicker'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'TimePicker route did not keep one page-level ScrollViewer.' }
@@ -863,7 +875,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBar; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBar; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

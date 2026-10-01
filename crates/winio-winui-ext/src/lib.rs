@@ -17,6 +17,7 @@ mod controls {
     mod menu_bar;
     mod navigation_view;
     mod number_box;
+    mod password_box;
     mod person_picture;
     mod rating_control;
     mod split_button;
@@ -50,6 +51,7 @@ mod controls {
         NavigationViewMessage, NavigationViewPaneDisplayMode,
     };
     pub use number_box::{NumberBox, NumberBoxEvent, NumberBoxMessage, NumberBoxSpinPlacement};
+    pub use password_box::{PasswordBox, PasswordBoxEvent, PasswordBoxMessage};
     pub use person_picture::{PersonPicture, PersonPictureMessage};
     pub use rating_control::{RatingControl, RatingControlEvent, RatingControlMessage};
     pub use split_button::{SplitButton, SplitButtonEvent, SplitButtonMessage};

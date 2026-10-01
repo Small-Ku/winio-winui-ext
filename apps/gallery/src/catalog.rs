@@ -76,6 +76,7 @@ pub enum GallerySampleKind {
     MenuBar,
     NumberBox,
     PersonPicture,
+    PasswordBox,
     RatingControl,
     SplitButton,
     TeachingTip,
@@ -157,6 +158,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["number", "numeric", "spin"],
         description: "Native NumberBox with range and inline spin buttons.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::PasswordBox,
+        id: "password-box",
+        title: "PasswordBox",
+        section: Some(GallerySectionId::BasicInput),
+        keywords: &["password", "secure", "input", "reveal"],
+        description: "Native PasswordBox with safe typed change notification.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::RatingControl,
@@ -335,6 +344,10 @@ mod tests {
         );
         assert_eq!(
             by_id("split-button").unwrap().section,
+            Some(GallerySectionId::BasicInput)
+        );
+        assert_eq!(
+            by_id("password-box").unwrap().section,
             Some(GallerySectionId::BasicInput)
         );
         assert_eq!(
