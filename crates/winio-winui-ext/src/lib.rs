@@ -29,6 +29,7 @@ mod controls {
     mod rating_control;
     mod selector_bar;
     mod split_button;
+    mod tab_view;
     mod teaching_tip;
     mod time_picker;
     mod toggle_button;
@@ -80,6 +81,7 @@ mod controls {
         SelectorBar, SelectorBarEvent, SelectorBarItemDescriptor, SelectorBarMessage,
     };
     pub use split_button::{SplitButton, SplitButtonEvent, SplitButtonMessage};
+    pub use tab_view::{TabView, TabViewEvent, TabViewMessage, TabViewTabDescriptor};
     pub use teaching_tip::{
         TeachingTip, TeachingTipCloseReason, TeachingTipEvent, TeachingTipMessage,
         TeachingTipPlacement,

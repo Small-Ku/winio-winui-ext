@@ -91,6 +91,7 @@ pub enum GallerySampleKind {
     TimePicker,
     TreeView,
     TwoPaneView,
+    TabView,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -313,6 +314,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         description: "Native SelectorBar with stable item IDs.",
     },
     GallerySampleDescriptor {
+        kind: GallerySampleKind::TabView,
+        id: "tab-view",
+        title: "TabView",
+        section: Some(GallerySectionId::Collections),
+        keywords: &["tabs", "selection", "collection"],
+        description: "Native TabView with stable tab IDs and typed selection changes.",
+    },
+    GallerySampleDescriptor {
         kind: GallerySampleKind::FlipView,
         id: "flip-view",
         title: "FlipView",
@@ -507,10 +516,15 @@ mod tests {
             by_id("selector-bar").unwrap().section,
             Some(GallerySectionId::Collections)
         );
+        assert_eq!(
+            by_id("tab-view").unwrap().section,
+            Some(GallerySectionId::Collections)
+        );
         for (id, kind) in [
             ("info-badge", GallerySampleKind::InfoBadge),
             ("progress-bar", GallerySampleKind::ProgressBar),
             ("two-pane-view", GallerySampleKind::TwoPaneView),
+            ("tab-view", GallerySampleKind::TabView),
             ("progress-bar", GallerySampleKind::ProgressBar),
             ("radio-buttons", GallerySampleKind::RadioButtons),
             ("selector-bar", GallerySampleKind::SelectorBar),
