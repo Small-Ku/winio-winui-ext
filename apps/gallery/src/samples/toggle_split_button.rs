@@ -38,6 +38,7 @@ impl Component for ToggleSplitButtonSample {
         card.set_output("unchecked")?;
         let mut control = Child::<ToggleSplitButton>::init(card.as_container()).await?;
         control.set_text("Format")?;
+        control.set_flyout_content_size(Size::new(260.0, 72.0))?;
         let mut flyout_label = Child::<Label>::init(control.flyout_container()).await?;
         flyout_label.set_text("Choose formatting options")?;
 

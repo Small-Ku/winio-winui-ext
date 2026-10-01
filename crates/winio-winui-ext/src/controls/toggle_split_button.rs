@@ -35,6 +35,21 @@ impl ToggleSplitButton {
     pub fn flyout_container(&self) -> BorrowedContainer<'_> {
         BorrowedContainer::winui(&self.flyout_content)
     }
+
+    /// Returns the configured size of the owned flyout content Canvas.
+    pub fn flyout_content_size(&self) -> Result<Size> {
+        Ok(Size::new(
+            self.flyout_content.Width()?,
+            self.flyout_content.Height()?,
+        ))
+    }
+
+    /// Sets the desired size of the owned flyout content Canvas.
+    pub fn set_flyout_content_size(&mut self, size: Size) -> Result<()> {
+        self.flyout_content.SetWidth(size.width)?;
+        self.flyout_content.SetHeight(size.height)?;
+        Ok(())
+    }
     pub fn is_checked(&self) -> Result<bool> {
         self.native.IsChecked()
     }
@@ -125,8 +140,6 @@ impl Component for ToggleSplitButton {
         native.cast::<MUXC::ContentControl>()?.SetContent(&text)?;
         let flyout = Flyout::new()?;
         let flyout_content = MUXC::Canvas::new()?;
-        flyout_content.SetWidth(260.0)?;
-        flyout_content.SetHeight(72.0)?;
         flyout.SetContent(&flyout_content)?;
         let flyout_base = flyout.cast::<FlyoutBase>()?;
         native.SetFlyout(&flyout_base)?;

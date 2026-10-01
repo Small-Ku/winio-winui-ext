@@ -3,6 +3,7 @@ use crate::{
     sample::{GallerySampleEvent, GallerySampleInit, GallerySampleMessage},
 };
 use winio::prelude::*;
+use winio_winui_bindings::Microsoft::UI::Xaml::Controls::StretchDirection;
 use winio_winui_ext::{ToggleButtonEvent, Viewbox};
 use winio_winui3::Microsoft::UI::Xaml::Media::Stretch;
 
@@ -40,6 +41,7 @@ impl Component for ViewboxSample {
         let mut viewbox = Child::<Viewbox>::init(card.as_container()).await?;
         viewbox.set_content_size(Size::new(360.0, 180.0))?;
         viewbox.set_stretch(Stretch::Uniform)?;
+        viewbox.set_stretch_direction(StretchDirection::Both)?;
         let mut content = Child::<Label>::init(viewbox.as_container()).await?;
         content.set_text("Native Viewbox scales this Winio label")?;
         content.set_loc(Point::new(20.0, 60.0))?;

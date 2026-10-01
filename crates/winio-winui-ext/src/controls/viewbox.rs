@@ -3,6 +3,7 @@ use winio::elm::{Component, ComponentSender};
 use winio::handle::{AsContainer, AsWidget, BorrowedContainer, BorrowedWidget};
 use winio::primitive::{Enable, Failable, Layoutable, Point, Size, Visible};
 use winio::{Error, Result};
+use winio_winui_bindings::Microsoft::UI::Xaml::Controls::StretchDirection;
 use winio_winui_bindings::Microsoft::UI::Xaml::Controls::Viewbox as NativeViewbox;
 use winio_winui3::Microsoft::UI::Xaml::Controls as MUXC;
 use winio_winui3::Microsoft::UI::Xaml::Media::Stretch;
@@ -10,6 +11,9 @@ use winio_winui3::Microsoft::UI::Xaml::Media::Stretch;
 use crate::native::NativeElement;
 
 /// A native Viewbox that owns a Canvas for Winio children and scales it as one unit.
+///
+/// The Canvas starts without a fixed extent. Call [`set_content_size`](Self::set_content_size)
+/// when it needs a measurable extent for native scaling; the wrapper does not choose one.
 #[derive(Debug)]
 pub struct Viewbox {
     native: NativeViewbox,
@@ -31,6 +35,7 @@ impl Viewbox {
         Ok(Size::new(self.content.Width()?, self.content.Height()?))
     }
 
+    /// Sets the Canvas extent used by Viewbox measurement and scaling.
     pub fn set_content_size(&mut self, size: Size) -> Result<()> {
         self.content.SetWidth(size.width)?;
         self.content.SetHeight(size.height)?;
@@ -43,6 +48,15 @@ impl Viewbox {
 
     pub fn set_stretch(&mut self, stretch: Stretch) -> Result<()> {
         self.native.SetStretch(stretch)?;
+        Ok(())
+    }
+
+    pub fn stretch_direction(&self) -> Result<StretchDirection> {
+        self.native.StretchDirection()
+    }
+
+    pub fn set_stretch_direction(&mut self, direction: StretchDirection) -> Result<()> {
+        self.native.SetStretchDirection(direction)?;
         Ok(())
     }
 
@@ -103,8 +117,6 @@ impl Component for Viewbox {
     async fn init(parent: Self::Init<'_>, _: &ComponentSender<Self>) -> Result<Self> {
         let native = NativeViewbox::new()?;
         let content = MUXC::Canvas::new()?;
-        content.SetWidth(360.0)?;
-        content.SetHeight(180.0)?;
         native.SetChild(&content)?;
         let framework_element =
             native.cast::<winio_winui3::Microsoft::UI::Xaml::FrameworkElement>()?;
