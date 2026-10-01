@@ -6,6 +6,7 @@ pub enum GallerySampleMessage {
     SetBounds(Rect),
     Emit(String),
     ExampleChanged { card: CardId, value: String },
+    OpenContentDialog,
     OpenTeachingTip,
     SourceExpanded { card: CardId, expanded: bool },
     ToggleThreeState(bool),
@@ -45,6 +46,11 @@ pub async fn create_sample(
         }
         GallerySampleKind::ToggleSwitch => {
             Child::<samples::toggle_switch::ToggleSwitchSample>::init(init)
+                .await?
+                .into_boxed()
+        }
+        GallerySampleKind::ContentDialog => {
+            Child::<samples::content_dialog::ContentDialogSample>::init(init)
                 .await?
                 .into_boxed()
         }

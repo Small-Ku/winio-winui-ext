@@ -21,7 +21,7 @@ Projection availability alone is not wrapper completeness or proof that every na
 | View | `Canvas` as the backend host surface | A hosting surface, not a stand-alone view equivalent. |
 | Window / media / web view / WGPU | `Xaml::Window`, `MediaPlayerElement`, `WebView2`, `SwapChainPanel` | Upstream projected, but these have broader lifecycle/runtime integration needs. |
 
-The upstream 0.4.4 projection also contains controls such as `ContentDialog` and `PasswordBox`; each still needs a wrapper API/lifecycle review before being exposed here.
+The upstream 0.4.4 projection also contains controls such as `ContentDialog` and `PasswordBox`. `ContentDialog` is now wrapped below; `PasswordBox` still needs a wrapper API/lifecycle review before being exposed here.
 
 ## Controls absent upstream but available supplementally
 
@@ -51,6 +51,7 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 | --- | --- | --- |
 | `IntegratedTitleBar` | supplemental `TitleBar` + upstream XAML `Window` | Public `AsWindow + AsContainer` bridge; pane/back events, chrome visibility and Mica helper; native custom title bar coexists with system caption buttons in UIA. |
 | `ToggleButton` | upstream `winio-winui3` | Native nullable three-state round-trip plus UIA TogglePattern event path. |
+| `ContentDialog` | upstream `winio-winui3` | Popup-backed wrapper inherits the routed page XamlRoot, owns a Winio-compatible content Canvas, exposes title/button/default-button APIs and typed opened/button/closing-result events; UIA opens the native dialog, verifies Winio-owned content, invokes Primary, and observes `Primary` close result. |
 | `AutoSuggestBox` | supplemental control + upstream shared bases | Stable suggestion IDs in native `Tag`; text, suggestion, and query events; UIA submits `TreeView` and observes the query in the Winio window title. |
 | `DropDownButton` | supplemental | Native Button.Flyout semantics with a Winio-owned flyout Canvas and open/close events; a private audited IButton ABI shim restores SetFlyout because winio-winui3 0.4.4 omits that accessor when FlyoutBase is outside its projection. UIA verifies native ExpandCollapse state and flyout content. |
 | `Expander` | supplemental | Native expand/collapse state and events; exposes a content Canvas as `AsContainer` so Winio children are constructed under the Expander without reparenting; UIA verifies nested content visibility. |

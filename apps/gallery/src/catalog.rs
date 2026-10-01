@@ -59,6 +59,7 @@ impl GallerySectionId {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum GallerySampleKind {
     Overview,
+    ContentDialog,
     DropDownButton,
     ToggleButton,
     ToggleSwitch,
@@ -153,6 +154,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["split", "button", "flyout", "action"],
         description: "Native SplitButton with owned flyout content.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::ContentDialog,
+        id: "content-dialog",
+        title: "ContentDialog",
+        section: Some(GallerySectionId::DialogsFlyouts),
+        keywords: &["content", "dialog", "modal", "primary", "secondary"],
+        description: "Native ContentDialog with Winio-owned content and typed lifecycle events.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::TeachingTip,
@@ -275,6 +284,10 @@ mod tests {
         );
         assert_eq!(
             by_id("teaching-tip").unwrap().section,
+            Some(GallerySectionId::DialogsFlyouts)
+        );
+        assert_eq!(
+            by_id("content-dialog").unwrap().section,
             Some(GallerySectionId::DialogsFlyouts)
         );
         assert_eq!(

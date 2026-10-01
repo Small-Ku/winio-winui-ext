@@ -628,6 +628,34 @@ try {
     $splitExpand.Collapse()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample split-button: flyout closed'
     $splitOutput = Wait-Text $window 'flyout closed'
+    Select-NavigationSample $window 'Dialogs and flyouts' 'ContentDialog'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ContentDialog'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'ContentDialog route did not keep one page-level ScrollViewer.' }
+    $dialogTarget = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Open ContentDialog') 'ContentDialog target'
+    ([System.Windows.Automation.TogglePattern]$dialogTarget.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample content-dialog: opened'
+    $dialogOutput = Wait-Text $window 'opened'
+    $dialogPopupCondition = [System.Windows.Automation.AndCondition]::new($pc,[System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Window),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Save changes?')))
+    $dialogPopup = Wait-Element $root $dialogPopupCondition 'native ContentDialog popup'
+    $dialogContent = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
+        $pc,
+        (Condition ([System.Windows.Automation.ControlType]::Text) 'This content is owned by Winio inside the native ContentDialog.'))) 'Winio-owned ContentDialog content'
+    if ($dialogContent.Current.IsOffscreen) { throw 'ContentDialog Winio-owned content remained offscreen.' }
+    $dialogSave = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
+        $pc,
+        (Condition ([System.Windows.Automation.ControlType]::Button) 'Save'))) 'ContentDialog primary button'
+    ([System.Windows.Automation.InvokePattern]$dialogSave.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample content-dialog: closing:Primary'
+    $dialogOutput = Wait-Text $window 'closing:Primary'
+    $deadline = [DateTime]::UtcNow.AddSeconds(8)
+    do {
+        $dialogAfter = $root.FindFirst($descendants, $dialogPopupCondition)
+        if ($null -eq $dialogAfter) { break }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($null -ne $dialogAfter) { throw 'ContentDialog popup remained after primary-button close.' }
     Select-NavigationSample $window 'Dialogs and flyouts' 'TeachingTip'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — TeachingTip'
     $target = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Open TeachingTip') 'TeachingTip target'
@@ -662,7 +690,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; InfoBar; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; ContentDialog XamlRoot/content ownership and Primary close result; InfoBar; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

@@ -1,3 +1,4 @@
+pub mod content_dialog;
 pub mod drop_down_button;
 pub mod expander;
 pub mod info_bar;

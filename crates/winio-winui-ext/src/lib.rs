@@ -6,6 +6,7 @@ mod native;
 
 mod controls {
     mod auto_suggest_box;
+    mod content_dialog;
     mod drop_down_button;
     mod expander;
     mod info_bar;
@@ -22,6 +23,10 @@ mod controls {
     pub use auto_suggest_box::{
         AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxItemDescriptor, AutoSuggestBoxMessage,
         AutoSuggestBoxTextChangeReason,
+    };
+    pub use content_dialog::{
+        ContentDialog, ContentDialogCloseResult, ContentDialogDefaultButton, ContentDialogEvent,
+        ContentDialogMessage,
     };
     pub use drop_down_button::{DropDownButton, DropDownButtonEvent, DropDownButtonMessage};
     pub use expander::{Expander, ExpanderEvent, ExpanderMessage};

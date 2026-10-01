@@ -145,6 +145,7 @@ impl Component for ToggleButtonSample {
                 }
             }
             GallerySampleMessage::NumberStepOption(_)
+            | GallerySampleMessage::OpenContentDialog
             | GallerySampleMessage::OpenTeachingTip
             | GallerySampleMessage::ExampleChanged { .. } => {}
         }
