@@ -3,7 +3,7 @@ use windows::UI::Color as NativeColor;
 use windows::core::Interface;
 use winio::elm::{Component, ComponentSender};
 use winio::handle::{AsWidget, BorrowedContainer, BorrowedWidget};
-use winio::primitive::{Enable, Failable, Layoutable, Point, Size, Visible};
+use winio::primitive::{Color, Enable, Failable, Layoutable, Point, Size, Visible};
 use winio::{Error, Result};
 use winio_winui_bindings::Microsoft::UI::Xaml::Controls::{
     ColorChangedEventArgs, ColorPicker as NativeColorPicker,
@@ -11,42 +11,18 @@ use winio_winui_bindings::Microsoft::UI::Xaml::Controls::{
 
 use crate::native::NativeElement;
 
-/// An RGBA color value used by the ColorPicker wrapper.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ColorValue {
-    pub a: u8,
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
+fn from_native_color(value: NativeColor) -> Color {
+    Color::new(value.R, value.G, value.B, value.A)
 }
 
-impl ColorValue {
-    pub const fn from_argb(a: u8, r: u8, g: u8, b: u8) -> Self {
-        Self { a, r, g, b }
-    }
-
-    pub const fn rgb(r: u8, g: u8, b: u8) -> Self {
-        Self::from_argb(255, r, g, b)
-    }
-}
-
-impl From<NativeColor> for ColorValue {
-    fn from(value: NativeColor) -> Self {
-        Self::from_argb(value.A, value.R, value.G, value.B)
+fn to_native_color(value: Color) -> NativeColor {
+    NativeColor {
+        A: value.a,
+        R: value.r,
+        G: value.g,
+        B: value.b,
     }
 }
-
-impl From<ColorValue> for NativeColor {
-    fn from(value: ColorValue) -> Self {
-        Self {
-            A: value.a,
-            R: value.r,
-            G: value.g,
-            B: value.b,
-        }
-    }
-}
-
 /// A native WinUI ColorPicker hosted as a first-class Winio component.
 #[derive(Debug)]
 pub struct ColorPicker {
@@ -60,12 +36,12 @@ impl Failable for ColorPicker {
 }
 
 impl ColorPicker {
-    pub fn color(&self) -> Result<ColorValue> {
-        Ok(self.native.Color()?.into())
+    pub fn color(&self) -> Result<Color> {
+        Ok(from_native_color(self.native.Color()?))
     }
 
-    pub fn set_color(&mut self, color: ColorValue) -> Result<()> {
-        self.native.SetColor(color.into())?;
+    pub fn set_color(&mut self, color: Color) -> Result<()> {
+        self.native.SetColor(to_native_color(color))?;
         Ok(())
     }
 
@@ -172,7 +148,7 @@ impl Layoutable for ColorPicker {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum ColorPickerEvent {
-    ColorChanged { old: ColorValue, new: ColorValue },
+    ColorChanged { old: Color, new: Color },
 }
 
 #[derive(Debug)]
@@ -197,8 +173,8 @@ impl Component for ColorPicker {
                 && let (Ok(old), Ok(new)) = (args.OldColor(), args.NewColor())
             {
                 event_sender.output(ColorPickerEvent::ColorChanged {
-                    old: old.into(),
-                    new: new.into(),
+                    old: from_native_color(old),
+                    new: from_native_color(new),
                 });
             }
             Ok(())

@@ -27,7 +27,7 @@ mod controls {
         AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxItemDescriptor, AutoSuggestBoxMessage,
         AutoSuggestBoxTextChangeReason,
     };
-    pub use color_picker::{ColorPicker, ColorPickerEvent, ColorPickerMessage, ColorValue};
+    pub use color_picker::{ColorPicker, ColorPickerEvent, ColorPickerMessage};
     pub use command_bar::{CommandBar, CommandBarAction, CommandBarEvent, CommandBarMessage};
     pub use content_dialog::{
         ContentDialog, ContentDialogCloseResult, ContentDialogDefaultButton, ContentDialogEvent,

@@ -3,7 +3,7 @@ use crate::{
     sample::{GallerySampleEvent, GallerySampleInit, GallerySampleMessage},
 };
 use winio::prelude::*;
-use winio_winui_ext::{ColorPicker, ColorPickerEvent, ColorValue, ToggleButtonEvent};
+use winio_winui_ext::{ColorPicker, ColorPickerEvent, ToggleButtonEvent};
 
 pub struct ColorPickerSample {
     page: GalleryPage,
@@ -43,7 +43,7 @@ impl Component for ColorPickerSample {
         picker.set_is_color_slider_visible(false)?;
         picker.set_is_color_channel_text_input_visible(false)?;
         picker.set_is_hex_input_visible(true)?;
-        picker.set_color(ColorValue::from_argb(255, 0x33, 0x66, 0xCC))?;
+        picker.set_color(Color::new(0x33, 0x66, 0xCC, 0xFF))?;
 
         Ok(Self {
             page,
@@ -141,7 +141,7 @@ impl ColorPickerSample {
     }
 }
 
-fn format_color(color: ColorValue) -> String {
+fn format_color(color: Color) -> String {
     format!(
         "#{:02X}{:02X}{:02X}{:02X}",
         color.a, color.r, color.g, color.b
