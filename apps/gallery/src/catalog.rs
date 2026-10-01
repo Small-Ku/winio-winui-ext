@@ -65,6 +65,7 @@ impl GallerySectionId {
 pub enum GallerySampleKind {
     Overview,
     CommandBar,
+    BreadcrumbBar,
     CalendarDatePicker,
     ColorPicker,
     ContentDialog,
@@ -325,6 +326,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         description: "Native TeachingTip popup lifecycle.",
     },
     GallerySampleDescriptor {
+        kind: GallerySampleKind::BreadcrumbBar,
+        id: "breadcrumb-bar",
+        title: "BreadcrumbBar",
+        section: Some(GallerySectionId::Collections),
+        keywords: &["breadcrumb", "path", "navigation", "hierarchy"],
+        description: "Native BreadcrumbBar backed by a WinUI-bindable iterable and stable descriptor IDs.",
+    },
+    GallerySampleDescriptor {
         kind: GallerySampleKind::PipsPager,
         id: "pips-pager",
         title: "PipsPager",
@@ -530,6 +539,10 @@ mod tests {
         assert_eq!(
             by_id("content-dialog").unwrap().section,
             Some(GallerySectionId::DialogsFlyouts)
+        );
+        assert_eq!(
+            by_id("breadcrumb-bar").unwrap().section,
+            Some(GallerySectionId::Collections)
         );
         assert_eq!(
             by_id("pips-pager").unwrap().section,

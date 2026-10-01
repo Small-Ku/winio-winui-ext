@@ -11,3 +11,4 @@ time.workspace = true
 winio_winui3.workspace = true
 winio-winui-bindings.workspace = true
 windows.workspace = true
+windows-core.workspace = true

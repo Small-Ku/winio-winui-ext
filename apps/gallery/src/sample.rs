@@ -67,6 +67,11 @@ pub async fn create_sample(
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::BreadcrumbBar => {
+            Child::<samples::breadcrumb_bar::BreadcrumbBarSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::CalendarDatePicker => {
             Child::<samples::calendar_date_picker::CalendarDatePickerSample>::init(init)
                 .await?

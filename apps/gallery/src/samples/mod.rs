@@ -1,3 +1,4 @@
+pub mod breadcrumb_bar;
 pub mod calendar_date_picker;
 pub mod color_picker;
 pub mod command_bar;

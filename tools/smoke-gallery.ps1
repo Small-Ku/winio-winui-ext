@@ -187,6 +187,16 @@ function Wait-SourceViewerVisible($Window, [string]$CardName) {
     } while ([DateTime]::UtcNow -lt $deadline)
     throw "Source viewer for $CardName did not enter the visible viewport."
 }
+function Wait-VerticalScrollPercent($ScrollViewer, [double]$Expected, [double]$Tolerance = 2) {
+    $deadline = [DateTime]::UtcNow.AddSeconds(4)
+    do {
+        $pattern = [System.Windows.Automation.ScrollPattern]$ScrollViewer.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
+        $actual = $pattern.Current.VerticalScrollPercent
+        if ([Math]::Abs($actual - $Expected) -le $Tolerance) { return $pattern }
+        Start-Sleep -Milliseconds 50
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw "ScrollViewer did not settle near vertical percent $Expected (actual=$actual)."
+}
 function Get-ScrollContentTop($Element, $ScrollViewer) {
     $scroll = [System.Windows.Automation.ScrollPattern]$ScrollViewer.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
     $viewport = $ScrollViewer.Current.BoundingRectangle
@@ -415,10 +425,16 @@ try {
 
     $collapsedScroll = Wait-ScrollViewer $window
     $collapsedScrollPattern = [System.Windows.Automation.ScrollPattern]$collapsedScroll.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
-    if ($collapsedScrollPattern.Current.VerticallyScrollable) { $collapsedScrollPattern.SetScrollPercent(-1, 100) }
+    if ($collapsedScrollPattern.Current.VerticallyScrollable) {
+        $collapsedScrollPattern.SetScrollPercent(-1, 100)
+        $collapsedScrollPattern = Wait-VerticalScrollPercent $collapsedScroll 100
+    }
     $basicBeforeElement = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample') 'basic ToggleButton before Card A source expansion'
     $basicContentTopBefore = Get-ScrollContentTop $basicBeforeElement $collapsedScroll
-    if ($collapsedScrollPattern.Current.VerticallyScrollable) { $collapsedScrollPattern.SetScrollPercent(-1, 0) }
+    if ($collapsedScrollPattern.Current.VerticallyScrollable) {
+        $collapsedScrollPattern.SetScrollPercent(-1, 0)
+        $collapsedScrollPattern = Wait-VerticalScrollPercent $collapsedScroll 0
+    }
     $sourcePattern.Toggle()
     $sourceToggle = Wait-CardSourceToggle $window 'ToggleButton — three-state'
     $sourceViewer = Wait-SourceViewer $window 'ToggleButton — three-state'
@@ -430,7 +446,10 @@ try {
     if ($scrollPattern.Current.VerticallyScrollable) { $scrollPattern.SetScrollPercent(-1, 45) }
     $sourceViewer = Wait-SourceViewerVisible $window 'ToggleButton — three-state'
     Assert-SourceViewerContract $sourceViewer 'skip_initial_event'
-    if ($scrollPattern.Current.VerticallyScrollable) { $scrollPattern.SetScrollPercent(-1, 0) }
+    if ($scrollPattern.Current.VerticallyScrollable) {
+        $scrollPattern.SetScrollPercent(-1, 0)
+        $scrollPattern = Wait-VerticalScrollPercent $sampleScroll 0
+    }
     $basicHeading = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample') 'basic ToggleButton after Card A source expansion'
     $scrollPattern = [System.Windows.Automation.ScrollPattern]$sampleScroll.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
     if ($scrollPattern.Current.HorizontallyScrollable) { throw 'The routed sample ScrollViewer enabled horizontal scrolling.' }
@@ -438,6 +457,8 @@ try {
         throw "Expanded source did not increase the vertical ScrollViewer extent: percent=$($scrollPattern.Current.VerticalScrollPercent), view=$($scrollPattern.Current.VerticalViewSize)."
     }
     $scrollPattern.SetScrollPercent(-1, 100)
+    $scrollPattern = Wait-VerticalScrollPercent $sampleScroll 100
+    $basicHeading = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample') 'basic ToggleButton after Card A source expansion at bottom'
     $basicContentTopAfter = Get-ScrollContentTop $basicHeading $sampleScroll
     if ($basicContentTopAfter -le $basicContentTopBefore) { throw "Expanding Card A source did not push Card B downward: contentY before=$basicContentTopBefore after=$basicContentTopAfter." }
     $sourceExtentAfterA = $scrollPattern.Current.VerticalViewSize
@@ -723,6 +744,18 @@ try {
     $info = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Text) 'Supplemental InfoBar canary') 'InfoBar canary message'
     $infoOutput = Wait-Text $window 'Open · informational status'
 
+    Select-NavigationSample $window 'Collections' 'BreadcrumbBar'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — BreadcrumbBar'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'BreadcrumbBar route did not keep one page-level ScrollViewer.' }
+    $breadcrumbItemCondition = [System.Windows.Automation.PropertyCondition]::new(
+        $automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.BreadcrumbBarItem')
+    $breadcrumbItems = $window.FindAll($descendants, $breadcrumbItemCondition)
+    if ($breadcrumbItems.Count -ne 3) { throw "BreadcrumbBar did not realize all three native breadcrumb item peers (count=$($breadcrumbItems.Count))." }
+    $projectsCrumb = $breadcrumbItems.Item(1)
+    if ($projectsCrumb.Current.ClassName -ne 'Microsoft.UI.Xaml.Controls.BreadcrumbBarItem') { throw 'BreadcrumbBar second realized item was not a native BreadcrumbBarItem.' }
+    ([System.Windows.Automation.InvokePattern]$projectsCrumb.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample breadcrumb-bar: path:projects'
+    $breadcrumbOutput = Wait-Text $window 'path:projects'
     Select-NavigationSample $window 'Collections' 'PipsPager'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — PipsPager'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'PipsPager route did not keep one page-level ScrollViewer.' }
@@ -890,7 +923,7 @@ try {
         [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'CalendarDatePicker'),
         [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Calendar date'))) 'native CalendarDatePicker'
     ([System.Windows.Automation.InvokePattern]$calendarDatePicker.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
-    $calendarView = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+    $calendarView = Wait-ProcessElement $window $pc ([System.Windows.Automation.PropertyCondition]::new(
         $automation::AutomationIdProperty, 'CalendarView')) 'CalendarDatePicker CalendarView'
     $calendarSelection = [System.Windows.Automation.SelectionPattern]$calendarView.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
     $calendarCurrent = $calendarSelection.Current.GetSelection() | Select-Object -First 1
@@ -915,7 +948,7 @@ try {
     ([System.Windows.Automation.InvokePattern]$dateFlyoutButton.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
 
     $dateWalker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
-    $monthSelector = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+    $monthSelector = Wait-ProcessElement $window $pc ([System.Windows.Automation.PropertyCondition]::new(
         $automation::AutomationIdProperty, 'MonthLoopingSelector')) 'DatePicker month selector'
     $monthSelection = [System.Windows.Automation.SelectionPattern]$monthSelector.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
     $currentMonth = $monthSelection.Current.GetSelection() | Select-Object -First 1
@@ -924,7 +957,7 @@ try {
     if ($null -eq $nextMonth) { throw 'DatePicker month selector had no next item.' }
     ([System.Windows.Automation.SelectionItemPattern]$nextMonth.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
 
-    $daySelector = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+    $daySelector = Wait-ProcessElement $window $pc ([System.Windows.Automation.PropertyCondition]::new(
         $automation::AutomationIdProperty, 'DayLoopingSelector')) 'DatePicker day selector'
     $daySelection = [System.Windows.Automation.SelectionPattern]$daySelector.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
     $currentDay = $daySelection.Current.GetSelection() | Select-Object -First 1
@@ -933,7 +966,7 @@ try {
     if ($null -eq $nextDay) { throw 'DatePicker day selector had no next item.' }
     ([System.Windows.Automation.SelectionItemPattern]$nextDay.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
 
-    $dateAccept = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+    $dateAccept = Wait-ProcessElement $window $pc ([System.Windows.Automation.PropertyCondition]::new(
         $automation::AutomationIdProperty, 'AcceptButton')) 'DatePicker AcceptButton'
     ([System.Windows.Automation.InvokePattern]$dateAccept.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample date-picker: 2026-11-02'
@@ -957,9 +990,9 @@ try {
         $automation::AutomationIdProperty, 'FlyoutButton')) 'TimePicker FlyoutButton'
     ([System.Windows.Automation.InvokePattern]$timeFlyoutButton.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
 
-    $hourSelector = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+    $hourSelector = Wait-ProcessElement $window $pc ([System.Windows.Automation.PropertyCondition]::new(
         $automation::AutomationIdProperty, 'HourLoopingSelector')) 'TimePicker hour selector'
-    $minuteSelector = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+    $minuteSelector = Wait-ProcessElement $window $pc ([System.Windows.Automation.PropertyCondition]::new(
         $automation::AutomationIdProperty, 'MinuteLoopingSelector')) 'TimePicker minute selector'
 
     $hour11 = Wait-Element $hourSelector ([System.Windows.Automation.AndCondition]::new(
@@ -982,7 +1015,7 @@ try {
     if (-not $hour11Selected.Current.IsSelected) { throw 'TimePicker hour selector did not select 11.' }
     if (-not $minute45Selected.Current.IsSelected) { throw 'TimePicker minute selector did not select 45.' }
 
-    $timeAccept = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+    $timeAccept = Wait-ProcessElement $window $pc ([System.Windows.Automation.PropertyCondition]::new(
         $automation::AutomationIdProperty, 'AcceptButton')) 'TimePicker AcceptButton'
     ([System.Windows.Automation.InvokePattern]$timeAccept.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample time-picker: 11:45'
@@ -1169,7 +1202,7 @@ try {
     ([System.Windows.Automation.SelectionItemPattern]$detailTab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample tab-view: selected:details'
 
-        Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ProgressRing RangeValue 65 + indeterminate option round-trip; ProgressBar RangeValue 65 + indeterminate round-trip; TwoPaneView pane child + paused state round-trip; SplitView native pane lifecycle and UIA visibility; Viewbox scales Winio-owned Canvas content; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; ToggleSplitButton checked state and independent owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBadge value getter round-trip; RadioButtons SelectionItemPattern stable ID; SelectorBar SelectionItemPattern stable ID; TabView descriptor ID selection + typed event with inert add/close chrome hidden; InfoBar; PipsPager Next/Previous stable selected-index events; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
+        Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ProgressRing RangeValue 65 + indeterminate option round-trip; ProgressBar RangeValue 65 + indeterminate round-trip; TwoPaneView pane child + paused state round-trip; SplitView native pane lifecycle and UIA visibility; Viewbox scales Winio-owned Canvas content; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; ToggleSplitButton checked state and independent owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBadge value getter round-trip; RadioButtons SelectionItemPattern stable ID; SelectorBar SelectionItemPattern stable ID; TabView descriptor ID selection + typed event with inert add/close chrome hidden; InfoBar; BreadcrumbBar WinUI-bindable ItemsSource realization + stable-ID click event; PipsPager Next/Previous stable selected-index events; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

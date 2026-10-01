@@ -2,10 +2,13 @@
 
 #![cfg(windows)]
 
+mod bindable;
+
 mod native;
 
 mod controls {
     mod auto_suggest_box;
+    mod breadcrumb_bar;
     mod calendar_date_picker;
     mod color_picker;
     mod command_bar;
@@ -43,6 +46,9 @@ mod controls {
     pub use auto_suggest_box::{
         AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxItemDescriptor, AutoSuggestBoxMessage,
         AutoSuggestBoxTextChangeReason,
+    };
+    pub use breadcrumb_bar::{
+        BreadcrumbBar, BreadcrumbBarEvent, BreadcrumbBarItemDescriptor, BreadcrumbBarMessage,
     };
     pub use calendar_date_picker::{
         CalendarDatePicker, CalendarDatePickerEvent, CalendarDatePickerMessage,
