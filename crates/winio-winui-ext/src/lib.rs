@@ -19,6 +19,7 @@ mod controls {
     mod rating_control;
     mod split_button;
     mod teaching_tip;
+    mod time_picker;
     mod toggle_button;
     mod toggle_switch;
     mod tree_view;
@@ -52,6 +53,7 @@ mod controls {
         TeachingTip, TeachingTipCloseReason, TeachingTipEvent, TeachingTipMessage,
         TeachingTipPlacement,
     };
+    pub use time_picker::{TimePicker, TimePickerEvent, TimePickerMessage};
     pub use toggle_button::{ToggleButton, ToggleButtonEvent, ToggleButtonMessage};
     pub use toggle_switch::{ToggleSwitch, ToggleSwitchEvent, ToggleSwitchMessage};
     pub use tree_view::{TreeView, TreeViewEvent, TreeViewMessage, TreeViewNodeDescriptor};

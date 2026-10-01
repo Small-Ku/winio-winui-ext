@@ -77,6 +77,7 @@ pub enum GallerySampleKind {
     RatingControl,
     SplitButton,
     TeachingTip,
+    TimePicker,
     TreeView,
 }
 
@@ -194,6 +195,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::DialogsFlyouts),
         keywords: &["content", "dialog", "modal", "primary", "secondary"],
         description: "Native ContentDialog with Winio-owned content and typed lifecycle events.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::TimePicker,
+        id: "time-picker",
+        title: "TimePicker",
+        section: Some(GallerySectionId::BasicInput),
+        keywords: &["time", "picker", "clock", "duration", "minute"],
+        description: "Native TimePicker using std::time::Duration for time-of-day values.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::TeachingTip,
@@ -325,6 +334,10 @@ mod tests {
         assert_eq!(
             by_id("command-bar").unwrap().section,
             Some(GallerySectionId::MenusToolbars)
+        );
+        assert_eq!(
+            by_id("time-picker").unwrap().section,
+            Some(GallerySectionId::BasicInput)
         );
         assert_eq!(
             by_id("teaching-tip").unwrap().section,

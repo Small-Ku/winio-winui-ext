@@ -91,6 +91,11 @@ pub async fn create_sample(
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::TimePicker => {
+            Child::<samples::time_picker::TimePickerSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::TeachingTip => {
             Child::<samples::teaching_tip::TeachingTipSample>::init(init)
                 .await?

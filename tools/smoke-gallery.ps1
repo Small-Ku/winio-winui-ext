@@ -643,6 +643,41 @@ try {
         $automation::AutomationIdProperty, 'HexTextBox')) 'ColorPicker HexTextBox after edit'
     $hexValue = [System.Windows.Automation.ValuePattern]$hexInput.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
     if ($hexValue.Current.Value -ne '#112233') { throw "ColorPicker edited hex value was '$($hexValue.Current.Value)'." }
+    Select-NavigationSample $window 'Basic input' 'TimePicker'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — TimePicker'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'TimePicker route did not keep one page-level ScrollViewer.' }
+    $timeFlyoutButton = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'FlyoutButton')) 'TimePicker FlyoutButton'
+    ([System.Windows.Automation.InvokePattern]$timeFlyoutButton.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+
+    $hourSelector = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
+        $pc,
+        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'HourLoopingSelector'))) 'TimePicker hour selector'
+    $minuteSelector = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
+        $pc,
+        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'MinuteLoopingSelector'))) 'TimePicker minute selector'
+
+    $hour11 = Wait-Element $hourSelector ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, '11'))) 'TimePicker hour 11'
+    ([System.Windows.Automation.SelectionItemPattern]$hour11.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
+
+    $minute45 = Wait-Element $minuteSelector ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, '45'))) 'TimePicker minute 45'
+    ([System.Windows.Automation.SelectionItemPattern]$minute45.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
+
+    $hourSelection = [System.Windows.Automation.SelectionPattern]$hourSelector.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
+    $minuteSelection = [System.Windows.Automation.SelectionPattern]$minuteSelector.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
+    if (($hourSelection.Current.GetSelection() | Select-Object -First 1).Current.Name -ne '11') { throw 'TimePicker hour selector did not select 11.' }
+    if (($minuteSelection.Current.GetSelection() | Select-Object -First 1).Current.Name -ne '45') { throw 'TimePicker minute selector did not select 45.' }
+
+    $timeAccept = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
+        $pc,
+        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'AcceptButton'))) 'TimePicker AcceptButton'
+    ([System.Windows.Automation.InvokePattern]$timeAccept.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample time-picker: 11:45'
+    $timeOutput = Wait-Text $window '11:45'
     Select-NavigationSample $window 'Menus and toolbars' 'CommandBar'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — CommandBar'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'CommandBar route did not keep one page-level ScrollViewer.' }
@@ -762,7 +797,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; InfoBar; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; InfoBar; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {
