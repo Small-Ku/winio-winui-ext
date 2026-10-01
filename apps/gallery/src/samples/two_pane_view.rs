@@ -42,7 +42,7 @@ impl Component for TwoPaneViewSample {
 
         let mut view = Child::<TwoPaneView>::init(card.as_container()).await?;
         view.set_wide_mode_configuration(TwoPaneViewWideModeConfiguration::LeftRight)?;
-        view.set_min_wide_mode_width(560.0)?;
+        view.set_min_wide_mode_width(400.0)?;
         let mut progress = Child::<ProgressBar>::init(view.pane1_container()).await?;
         progress.set_minimum(0.0)?;
         progress.set_maximum(100.0)?;

@@ -628,7 +628,7 @@ try {
     Select-NavigationSample $window 'Layout' 'TwoPaneView'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — TwoPaneView'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'TwoPaneView route did not keep one page-level ScrollViewer.' }
-    $twoPane = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.TwoPaneView')) 'native TwoPaneView'
+    $nativePaneProgress = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.ProgressBar')) 'native ProgressBar hosted in TwoPaneView pane 1'
     $pauseProgress = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Pause progress') 'Winio child in TwoPaneView pane 2'
     $pausePattern = [System.Windows.Automation.TogglePattern]$pauseProgress.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
     $pausePattern.Toggle()
