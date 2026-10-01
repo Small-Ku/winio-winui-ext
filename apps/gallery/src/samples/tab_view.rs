@@ -99,12 +99,10 @@ impl Component for TabViewSample {
         }
         Ok(false)
     }
-
-    #[allow(clippy::needless_question_mark)]
     async fn update_children(&mut self) -> Result<bool> {
         self.page.update_children().await?;
         self.card.update_children().await?;
-        update_children!(self.tabs)
+        self.tabs.update().await
     }
 
     fn render_children(&mut self) -> Result<()> {

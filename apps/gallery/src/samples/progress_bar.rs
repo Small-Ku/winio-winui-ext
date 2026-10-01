@@ -8,7 +8,7 @@ use winio_winui_ext::{ProgressBar, ToggleButton, ToggleButtonEvent};
 pub struct ProgressBarSample {
     page: GalleryPage,
     card: GalleryExample,
-    ring: Child<ProgressBar>,
+    bar: Child<ProgressBar>,
     indeterminate: Child<ToggleButton>,
     viewport: Rect,
     source_expanded: bool,
@@ -39,11 +39,11 @@ impl Component for ProgressBarSample {
         .await?;
         card.set_output("value:65 · determinate")?;
 
-        let mut ring = Child::<ProgressBar>::init(card.as_container()).await?;
-        ring.set_minimum(0.0)?;
-        ring.set_maximum(100.0)?;
-        ring.set_value(65.0)?;
-        ring.set_is_indeterminate(false)?;
+        let mut bar = Child::<ProgressBar>::init(card.as_container()).await?;
+        bar.set_minimum(0.0)?;
+        bar.set_maximum(100.0)?;
+        bar.set_value(65.0)?;
+        bar.set_is_indeterminate(false)?;
 
         let mut indeterminate = Child::<ToggleButton>::init(card.as_container()).await?;
         indeterminate.set_text("Indeterminate")?;
@@ -52,7 +52,7 @@ impl Component for ProgressBarSample {
         Ok(Self {
             page,
             card,
-            ring,
+            bar,
             indeterminate,
             viewport: Rect::zero(),
             source_expanded: false,
@@ -73,12 +73,12 @@ impl Component for ProgressBarSample {
             self.indeterminate => {
                 ToggleButtonEvent::StateChanged(state) =>
                     GallerySampleMessage::Emit(if state == Some(true) {
-                        "progress-ring:indeterminate".to_owned()
+                        "progress-bar:indeterminate".to_owned()
                     } else {
-                        "progress-ring:determinate".to_owned()
+                        "progress-bar:determinate".to_owned()
                     }),
             },
-            self.ring => {},
+            self.bar => {},
         }
     }
 
@@ -95,12 +95,12 @@ impl Component for ProgressBarSample {
                 self.source_expanded = expanded;
                 self.reflow()?;
             }
-            GallerySampleMessage::Emit(value) if value == "progress-ring:indeterminate" => {
-                self.ring.set_is_indeterminate(true)?;
+            GallerySampleMessage::Emit(value) if value == "progress-bar:indeterminate" => {
+                self.bar.set_is_indeterminate(true)?;
                 self.card.set_output("indeterminate")?;
             }
-            GallerySampleMessage::Emit(value) if value == "progress-ring:determinate" => {
-                self.ring.set_is_indeterminate(false)?;
+            GallerySampleMessage::Emit(value) if value == "progress-bar:determinate" => {
+                self.bar.set_is_indeterminate(false)?;
                 self.card.set_output("value:65 · determinate")?;
             }
             _ => {}
@@ -111,13 +111,13 @@ impl Component for ProgressBarSample {
     async fn update_children(&mut self) -> Result<bool> {
         self.page.update_children().await?;
         self.card.update_children().await?;
-        update_children!(self.ring, self.indeterminate)
+        update_children!(self.bar, self.indeterminate)
     }
 
     fn render_children(&mut self) -> Result<()> {
         self.page.render()?;
         self.card.render()?;
-        self.ring.render()?;
+        self.bar.render()?;
         self.indeterminate.render()
     }
 }
@@ -130,11 +130,11 @@ impl ProgressBarSample {
         self.card.set_layout(0.0, layout)?;
         self.page.set_layout(self.viewport, layout.content_height)?;
 
-        self.ring.set_loc(Point::new(
+        self.bar.set_loc(Point::new(
             layout.primary.origin.x + 56.0,
             layout.primary.origin.y + 36.0,
         ))?;
-        self.ring.set_size(Size::new(240.0, 36.0))?;
+        self.bar.set_size(Size::new(240.0, 36.0))?;
 
         if let Some(options) = layout.options {
             self.indeterminate.set_visible(true)?;

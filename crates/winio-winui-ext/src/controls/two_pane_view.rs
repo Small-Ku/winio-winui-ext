@@ -241,10 +241,6 @@ impl Component for TwoPaneView {
         let native = NativeTwoPaneView::new()?;
         let pane1 = MUXC::Canvas::new()?;
         let pane2 = MUXC::Canvas::new()?;
-        pane1.SetWidth(320.0)?;
-        pane1.SetHeight(180.0)?;
-        pane2.SetWidth(320.0)?;
-        pane2.SetHeight(180.0)?;
         native.SetPane1(&pane1)?;
         native.SetPane2(&pane2)?;
         let element = NativeElement::new(

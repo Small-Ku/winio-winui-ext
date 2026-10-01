@@ -71,6 +71,7 @@ impl TabView {
         let mut items = Vec::with_capacity(tabs.len());
         for tab in tabs {
             let item = NativeTabViewItem::new()?;
+            item.SetIsClosable(false)?;
             let header = MUXC::TextBlock::new()?;
             header.SetText(&HSTRING::from(tab.title.as_str()))?;
             item.SetHeader(&header)?;
@@ -184,6 +185,7 @@ impl Component for TabView {
 
     async fn init(parent: Self::Init<'_>, sender: &ComponentSender<Self>) -> Result<Self> {
         let native = NativeTabView::new()?;
+        native.SetIsAddTabButtonVisible(false)?;
         let event_native = native.clone();
         let event_sender = sender.clone();
         let selection_changed_token =
