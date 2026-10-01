@@ -111,6 +111,9 @@ pub async fn create_sample(
         GallerySampleKind::GridView => Child::<samples::grid_view::GridViewSample>::init(init)
             .await?
             .into_boxed(),
+        GallerySampleKind::ItemsView => Child::<samples::items_view::ItemsViewSample>::init(init)
+            .await?
+            .into_boxed(),
         GallerySampleKind::InfoBar => Child::<samples::info_bar::InfoBarSample>::init(init)
             .await?
             .into_boxed(),

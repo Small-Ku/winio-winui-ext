@@ -10,6 +10,7 @@ pub mod flip_view;
 pub mod grid_view;
 pub mod info_badge;
 pub mod info_bar;
+pub mod items_view;
 pub mod menu_bar;
 pub mod number_box;
 pub mod overview;

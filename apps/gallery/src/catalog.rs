@@ -77,6 +77,7 @@ pub enum GallerySampleKind {
     Expander,
     FlipView,
     GridView,
+    ItemsView,
     InfoBar,
     InfoBadge,
     MenuBar,
@@ -375,6 +376,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         description: "Native selectable tiles backed by stable descriptor IDs.",
     },
     GallerySampleDescriptor {
+        kind: GallerySampleKind::ItemsView,
+        id: "items-view",
+        title: "ItemsView",
+        section: Some(GallerySectionId::Collections),
+        keywords: &["items", "list", "selection", "collection"],
+        description: "Native virtualized list with stable descriptor IDs and single selection.",
+    },
+    GallerySampleDescriptor {
         kind: GallerySampleKind::TreeView,
         id: "tree-view",
         title: "TreeView",
@@ -566,6 +575,10 @@ mod tests {
             Some(GallerySectionId::Collections)
         );
         assert_eq!(
+            by_id("items-view").unwrap().section,
+            Some(GallerySectionId::Collections)
+        );
+        assert_eq!(
             by_id("tree-view").unwrap().section,
             Some(GallerySectionId::Collections)
         );
@@ -597,6 +610,7 @@ mod tests {
             ("radio-buttons", GallerySampleKind::RadioButtons),
             ("selector-bar", GallerySampleKind::SelectorBar),
             ("grid-view", GallerySampleKind::GridView),
+            ("items-view", GallerySampleKind::ItemsView),
         ] {
             assert_eq!(by_id(id).unwrap().kind, kind, "catalog kind for {id}");
         }

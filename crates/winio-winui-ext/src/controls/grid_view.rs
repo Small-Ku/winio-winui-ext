@@ -52,8 +52,9 @@ impl Failable for GridView {
 }
 
 impl GridView {
-    /// Replaces tiles and preserves the selected tile by stable ID where possible.
-    /// Empty or duplicate IDs are rejected; `set_selected_index` accepts only `-1` to clear.
+    /// Replaces tiles and preserves selection only when its stable ID remains present.
+    /// A cleared selection or a removed selected ID stays unselected. Empty or duplicate IDs
+    /// are rejected; `set_selected_index` accepts only `-1` to clear.
     pub fn set_items(&mut self, items: &[GridViewItemDescriptor]) -> Result<()> {
         let mut ids = HashSet::with_capacity(items.len());
         if items
@@ -91,11 +92,7 @@ impl GridView {
         self.items = items.to_vec();
         self.native_items = native_items;
         self.items_source = Some(source);
-        let selected_index = previous_id
-            .and_then(|id| self.items.iter().position(|item| item.id == id))
-            .map_or(if self.items.is_empty() { -1 } else { 0 }, |index| {
-                index as i32
-            });
+        let selected_index = selected_index_for_id(previous_id.as_deref(), &self.items);
         self.selector.SetSelectedIndex(selected_index)?;
         Ok(())
     }
@@ -232,5 +229,32 @@ impl Drop for GridView {
         let _ = self
             .selector
             .RemoveSelectionChanged(self.selection_changed_token);
+    }
+}
+
+fn selected_index_for_id(previous_id: Option<&str>, items: &[GridViewItemDescriptor]) -> i32 {
+    previous_id
+        .and_then(|id| items.iter().position(|item| item.id == id))
+        .and_then(|index| i32::try_from(index).ok())
+        .unwrap_or(-1)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn items(ids: &[&str]) -> Vec<GridViewItemDescriptor> {
+        ids.iter()
+            .map(|id| GridViewItemDescriptor::new(*id, format!("label {id}")))
+            .collect()
+    }
+
+    #[test]
+    fn replacing_items_preserves_only_an_existing_selected_id() {
+        let reordered = items(&["third", "first", "second"]);
+        assert_eq!(selected_index_for_id(Some("second"), &reordered), 2);
+        assert_eq!(selected_index_for_id(None, &reordered), -1);
+        assert_eq!(selected_index_for_id(Some("removed"), &reordered), -1);
+        assert_eq!(selected_index_for_id(Some("second"), &[]), -1);
     }
 }

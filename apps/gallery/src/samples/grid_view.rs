@@ -42,6 +42,7 @@ impl Component for GridViewSample {
             GridViewItemDescriptor::new("second", "Second tile"),
             GridViewItemDescriptor::new("third", "Third tile"),
         ])?;
+        grid.set_selected_index(0)?;
         Ok(Self {
             page,
             card,
