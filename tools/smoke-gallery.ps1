@@ -651,6 +651,40 @@ try {
     ([System.Windows.Automation.InvokePattern]$commandSettings.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample command-bar: action:settings'
     $commandOutput = Wait-Text $window 'action:settings'
+    Select-NavigationSample $window 'Menus and toolbars' 'MenuBar'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — MenuBar'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'MenuBar route did not keep one page-level ScrollViewer.' }
+    $fileMenu = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.MenuBarItem'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'File'))) 'MenuBar File menu'
+    $fileExpand = [System.Windows.Automation.ExpandCollapsePattern]$fileMenu.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+    if ($fileExpand.Current.ExpandCollapseState -ne [System.Windows.Automation.ExpandCollapseState]::Collapsed) { throw 'MenuBar File menu did not start collapsed.' }
+    $fileExpand.Expand()
+    $newAction = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
+        $pc,
+        [System.Windows.Automation.AndCondition]::new(
+            [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
+            [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'MenuFlyoutItem'),
+            [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'New')))) 'MenuBar File/New action'
+    if ($newAction.Current.IsOffscreen) { throw 'MenuBar File/New action remained offscreen after expanding File.' }
+    ([System.Windows.Automation.InvokePattern]$newAction.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample menu-bar: action:new'
+    $menuOutput = Wait-Text $window 'action:new'
+    $helpMenu = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.MenuBarItem'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Help'))) 'MenuBar Help menu'
+    ([System.Windows.Automation.ExpandCollapsePattern]$helpMenu.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)).Expand()
+    $aboutAction = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
+        $pc,
+        [System.Windows.Automation.AndCondition]::new(
+            [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
+            [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'MenuFlyoutItem'),
+            [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'About')))) 'MenuBar Help/About action'
+    ([System.Windows.Automation.InvokePattern]$aboutAction.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample menu-bar: action:about'
+    $menuOutput = Wait-Text $window 'action:about'
     Select-NavigationSample $window 'Dialogs and flyouts' 'ContentDialog'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ContentDialog'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'ContentDialog route did not keep one page-level ScrollViewer.' }
@@ -713,7 +747,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; ContentDialog XamlRoot/content ownership and Primary close result; InfoBar; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; InfoBar; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

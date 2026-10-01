@@ -70,6 +70,9 @@ pub async fn create_sample(
         GallerySampleKind::InfoBar => Child::<samples::info_bar::InfoBarSample>::init(init)
             .await?
             .into_boxed(),
+        GallerySampleKind::MenuBar => Child::<samples::menu_bar::MenuBarSample>::init(init)
+            .await?
+            .into_boxed(),
         GallerySampleKind::NumberBox => Child::<samples::number_box::NumberBoxSample>::init(init)
             .await?
             .into_boxed(),

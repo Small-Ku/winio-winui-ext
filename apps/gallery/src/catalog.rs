@@ -71,6 +71,7 @@ pub enum GallerySampleKind {
     ToggleSwitch,
     Expander,
     InfoBar,
+    MenuBar,
     NumberBox,
     RatingControl,
     SplitButton,
@@ -168,6 +169,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::MenusToolbars),
         keywords: &["command", "bar", "toolbar", "overflow", "action"],
         description: "Native CommandBar with stable primary and overflow actions.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::MenuBar,
+        id: "menu-bar",
+        title: "MenuBar",
+        section: Some(GallerySectionId::MenusToolbars),
+        keywords: &["menu", "bar", "file", "help", "flyout"],
+        description: "Native MenuBar with stable descriptor-backed actions.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ContentDialog,
@@ -295,6 +304,10 @@ mod tests {
         assert_eq!(
             by_id("info-bar").unwrap().section,
             Some(GallerySectionId::StatusInfo)
+        );
+        assert_eq!(
+            by_id("menu-bar").unwrap().section,
+            Some(GallerySectionId::MenusToolbars)
         );
         assert_eq!(
             by_id("command-bar").unwrap().section,

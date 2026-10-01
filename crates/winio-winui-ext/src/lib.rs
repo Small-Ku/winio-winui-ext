@@ -12,6 +12,7 @@ mod controls {
     mod expander;
     mod info_bar;
     mod integrated_title_bar;
+    mod menu_bar;
     mod navigation_view;
     mod number_box;
     mod rating_control;
@@ -37,6 +38,7 @@ mod controls {
         IntegratedTitleBar, IntegratedTitleBarEvent, IntegratedTitleBarInit,
         IntegratedTitleBarMessage,
     };
+    pub use menu_bar::{MenuBar, MenuBarAction, MenuBarEvent, MenuBarMenu, MenuBarMessage};
     pub use navigation_view::{
         NavigationView, NavigationViewEvent, NavigationViewItemDescriptor, NavigationViewItemIcon,
         NavigationViewMessage, NavigationViewPaneDisplayMode,
