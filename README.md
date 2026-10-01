@@ -31,7 +31,7 @@ mise run bindings-check
 
 ## Current scope
 
-The reference wrappers are an integrated native WinUI `TitleBar`, native upstream `Primitives::ToggleButton`, `ContentDialog`, `PasswordBox`, `ProgressBar`, and `TabView`, plus supplemental AutoSuggestBox, CalendarDatePicker, ColorPicker, CommandBar, DatePicker, DropDownButton, Expander, FlipView, InfoBadge, InfoBar, MenuBar, NavigationView, NumberBox, PersonPicture, PipsPager, ProgressRing, RadioButtons, RatingControl, SelectorBar, SplitButton, TimePicker, ToggleSwitch, TeachingTip, TreeView, and TwoPaneView controls.
+The reference wrappers are an integrated native WinUI `TitleBar`, native upstream `Primitives::ToggleButton`, `ContentDialog`, `PasswordBox`, `ProgressBar`, and `TabView`, plus supplemental AutoSuggestBox, CalendarDatePicker, ColorPicker, CommandBar, DatePicker, DropDownButton, Expander, FlipView, InfoBadge, InfoBar, MenuBar, NavigationView, NumberBox, PersonPicture, PipsPager, ProgressRing, RadioButtons, RatingControl, SelectorBar, SplitButton, TimePicker, ToggleSwitch, TeachingTip, TreeView, and TwoPaneView controls. SwipeControl is deferred until Gallery smoke can drive a real native swipe gesture and verify action invocation.
 
 ToggleButton preserves its two-state interaction default; the Gallery enables three-state mode and verifies a real `None`/indeterminate round-trip. Because the 0.4.4 generated `IsChecked` getter cannot represent a null `IReference<bool>`, that nullable read stays behind one narrow raw `IToggleButton` ABI call.
 

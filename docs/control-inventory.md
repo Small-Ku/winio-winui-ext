@@ -44,6 +44,7 @@ The following examples are absent as public control structs from the compatible 
 - `ProgressRing`, `RatingControl`, `SplitButton`, `DropDownButton`
 - `BreadcrumbBar`, `InfoBadge`, `RadioButtons`, `SelectorBar`
 - `TwoPaneView`
+- `SwipeControl`, `SwipeItem`, `SwipeItems`
 
 This list demonstrates supplemental projection availability; it is not a wrapper roadmap promise. The broad generator also follows required dependencies outside the root namespace where bindgen proves they are needed. It does not generate the entire Microsoft metadata universe.
 
@@ -77,6 +78,10 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 | `ProgressBar` | upstream `winio-winui3` | Determinate/indeterminate, minimum/maximum/value, error and paused states. Gallery UIA verifies native RangeValue `65` and toggles indeterminate state in the running control. |
 | `TwoPaneView` | supplemental | Owns two native Canvas pane containers for Winio children; exposes adaptive mode/configuration, pane priority, and width/height thresholds. Gallery hosts Winio controls in both panes and toggles native paused progress state. |
 | `TabView` | upstream `winio-winui3` | Owns its `TabViewItem` instances, stores stable IDs separately from visible titles, preserves selection by ID when replacing descriptors, validates selected indexes, and emits typed selection changes. Gallery UIA selects a tab by its descriptor-derived AutomationId. |
+
+### Deferred candidate
+
+`SwipeControl` remains deferred for this batch. Its action items are exposed through four native directional `SwipeItems` collections, and `SwipeItem.Invoked` requires per-item event-token ownership. The current Gallery smoke harness has no pointer-gesture driver to reveal the native actions before invoking them, so it cannot provide the required real-runtime invocation evidence without adding a new synthetic-input path.
 | `RatingControl` | supplemental | Value, max rating, read-only/clear settings, caption and typed value-change events; Gallery UIA verifies native RangeValue 3→4 with max 5. |
 | `SplitButton` | supplemental | Native primary `Click` event plus explicit flyout container; Winio children are created under the flyout Canvas, with flyout open/close events and UIA invoke/expand-collapse coverage. |
 | `TimePicker` | supplemental | Uses `std::time::Duration` for time-of-day values, exposes header/clock/minute-increment APIs and typed old/new time events. Gallery UIA opens the native picker, selects hour 11 and minute 45, accepts, and observes `10:30 → 11:45`. |
