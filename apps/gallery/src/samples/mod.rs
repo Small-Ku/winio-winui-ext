@@ -1,3 +1,4 @@
+pub mod color_picker;
 pub mod command_bar;
 pub mod content_dialog;
 pub mod drop_down_button;

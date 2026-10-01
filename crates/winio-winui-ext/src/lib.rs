@@ -6,6 +6,7 @@ mod native;
 
 mod controls {
     mod auto_suggest_box;
+    mod color_picker;
     mod command_bar;
     mod content_dialog;
     mod drop_down_button;
@@ -26,6 +27,7 @@ mod controls {
         AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxItemDescriptor, AutoSuggestBoxMessage,
         AutoSuggestBoxTextChangeReason,
     };
+    pub use color_picker::{ColorPicker, ColorPickerEvent, ColorPickerMessage, ColorValue};
     pub use command_bar::{CommandBar, CommandBarAction, CommandBarEvent, CommandBarMessage};
     pub use content_dialog::{
         ContentDialog, ContentDialogCloseResult, ContentDialogDefaultButton, ContentDialogEvent,

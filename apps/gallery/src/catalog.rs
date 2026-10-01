@@ -65,6 +65,7 @@ impl GallerySectionId {
 pub enum GallerySampleKind {
     Overview,
     CommandBar,
+    ColorPicker,
     ContentDialog,
     DropDownButton,
     ToggleButton,
@@ -161,6 +162,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["split", "button", "flyout", "action"],
         description: "Native SplitButton with owned flyout content.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::ColorPicker,
+        id: "color-picker",
+        title: "ColorPicker",
+        section: Some(GallerySectionId::BasicInput),
+        keywords: &["color", "picker", "rgba", "hex"],
+        description: "Native compact ColorPicker with typed RGBA changes.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::CommandBar,
@@ -308,6 +317,10 @@ mod tests {
         assert_eq!(
             by_id("menu-bar").unwrap().section,
             Some(GallerySectionId::MenusToolbars)
+        );
+        assert_eq!(
+            by_id("color-picker").unwrap().section,
+            Some(GallerySectionId::BasicInput)
         );
         assert_eq!(
             by_id("command-bar").unwrap().section,

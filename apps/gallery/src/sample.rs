@@ -49,6 +49,11 @@ pub async fn create_sample(
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::ColorPicker => {
+            Child::<samples::color_picker::ColorPickerSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::CommandBar => {
             Child::<samples::command_bar::CommandBarSample>::init(init)
                 .await?

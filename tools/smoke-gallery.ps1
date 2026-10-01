@@ -628,6 +628,21 @@ try {
     $splitExpand.Collapse()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample split-button: flyout closed'
     $splitOutput = Wait-Text $window 'flyout closed'
+    Select-NavigationSample $window 'Basic input' 'ColorPicker'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ColorPicker'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'ColorPicker route did not keep one page-level ScrollViewer.' }
+    $hexInput = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'HexTextBox')) 'ColorPicker HexTextBox'
+    if ($hexInput.Current.IsOffscreen) { throw 'ColorPicker HexTextBox was offscreen in compact sample.' }
+    $hexValue = [System.Windows.Automation.ValuePattern]$hexInput.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    if ($hexValue.Current.Value -ne '#3366CC') { throw "ColorPicker initial hex value was '$($hexValue.Current.Value)'." }
+    $hexValue.SetValue('#112233')
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample color-picker: #FF112233'
+    $colorOutput = Wait-Text $window '#FF112233'
+    $hexInput = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'HexTextBox')) 'ColorPicker HexTextBox after edit'
+    $hexValue = [System.Windows.Automation.ValuePattern]$hexInput.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    if ($hexValue.Current.Value -ne '#112233') { throw "ColorPicker edited hex value was '$($hexValue.Current.Value)'." }
     Select-NavigationSample $window 'Menus and toolbars' 'CommandBar'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — CommandBar'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'CommandBar route did not keep one page-level ScrollViewer.' }
@@ -747,7 +762,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; InfoBar; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; InfoBar; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {
