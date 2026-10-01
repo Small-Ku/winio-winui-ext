@@ -637,6 +637,12 @@ try {
     $pausePattern.Toggle()
     $null = Wait-Text $window 'wide · unpaused'
     if ($pausePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'TwoPaneView child did not toggle progress back to unpaused.' }
+    Select-NavigationSample $window 'Layout' 'Viewbox'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — Viewbox'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'Viewbox route did not keep one page-level ScrollViewer.' }
+    $scaledContent = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Text) 'Native Viewbox scales this Winio label') 'Winio content hosted in Viewbox'
+    $scaledRect = $scaledContent.Current.BoundingRectangle
+    if ($scaledRect.Width -lt 200 -or $scaledRect.Width -ge 320 -or $scaledRect.Height -lt 45 -or $scaledRect.Height -gt 60) { throw "Viewbox did not scale its 320×60 Winio child into the configured 240×120 host (child bounds $($scaledRect.Width)×$($scaledRect.Height))." }
     Select-NavigationSample $window 'Status and info' 'PersonPicture'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — PersonPicture'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'PersonPicture route did not keep one page-level ScrollViewer.' }
@@ -768,6 +774,34 @@ try {
     $splitExpand.Collapse()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample split-button: flyout closed'
     $splitOutput = Wait-Text $window 'flyout closed'
+    Select-NavigationSample $window 'Basic input' 'ToggleSplitButton'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ToggleSplitButton'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'ToggleSplitButton route did not keep one page-level ScrollViewer.' }
+    $toggleSplitCondition = [System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.ToggleSplitButton'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Format'))
+    $toggleSplit = Wait-Element $window $toggleSplitCondition 'native ToggleSplitButton'
+    $toggleSplitPattern = [System.Windows.Automation.TogglePattern]$toggleSplit.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    if ($toggleSplitPattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'ToggleSplitButton did not start unchecked.' }
+    $toggleSplitPattern.Toggle()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample toggle-split-button: checked'
+    $null = Wait-Text $window 'checked'
+    $toggleSplit = Wait-Element $window $toggleSplitCondition 'ToggleSplitButton after check'
+    $toggleSplitPattern = [System.Windows.Automation.TogglePattern]$toggleSplit.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    if ($toggleSplitPattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::On) { throw 'ToggleSplitButton TogglePattern did not reflect checked state.' }
+    $toggleSplitExpand = [System.Windows.Automation.ExpandCollapsePattern]$toggleSplit.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+    $toggleSplitExpand.Expand()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample toggle-split-button: flyout opened'
+    $null = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
+        $pc,
+        (Condition ([System.Windows.Automation.ControlType]::Text) 'Choose formatting options'))) 'ToggleSplitButton flyout Winio content'
+    $toggleSplit = Wait-Element $window $toggleSplitCondition 'ToggleSplitButton while flyout is open'
+    $toggleSplitPattern = [System.Windows.Automation.TogglePattern]$toggleSplit.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    if ($toggleSplitPattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::On) { throw 'Opening ToggleSplitButton flyout changed its checked state.' }
+    $toggleSplitExpand = [System.Windows.Automation.ExpandCollapsePattern]$toggleSplit.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+    $toggleSplitExpand.Collapse()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample toggle-split-button: flyout closed'
+    $null = Wait-Text $window 'flyout closed'
     Select-NavigationSample $window 'Basic input' 'ColorPicker'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ColorPicker'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'ColorPicker route did not keep one page-level ScrollViewer.' }
@@ -1041,7 +1075,7 @@ try {
     ([System.Windows.Automation.SelectionItemPattern]$detailTab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample tab-view: selected:details'
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ProgressRing RangeValue 65 + indeterminate option round-trip; ProgressBar RangeValue 65 + indeterminate round-trip; TwoPaneView pane child + paused state round-trip; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBadge value getter round-trip; RadioButtons SelectionItemPattern stable ID; SelectorBar SelectionItemPattern stable ID; TabView descriptor ID selection + typed event with inert add/close chrome hidden; InfoBar; PipsPager Next/Previous stable selected-index events; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
+        Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ProgressRing RangeValue 65 + indeterminate option round-trip; ProgressBar RangeValue 65 + indeterminate round-trip; TwoPaneView pane child + paused state round-trip; Viewbox scales Winio-owned Canvas content; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; ToggleSplitButton checked state and independent owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBadge value getter round-trip; RadioButtons SelectionItemPattern stable ID; SelectorBar SelectionItemPattern stable ID; TabView descriptor ID selection + typed event with inert add/close chrome hidden; InfoBar; PipsPager Next/Previous stable selected-index events; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

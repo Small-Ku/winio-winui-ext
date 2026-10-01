@@ -72,6 +72,7 @@ pub enum GallerySampleKind {
     DropDownButton,
     ToggleButton,
     ToggleSwitch,
+    ToggleSplitButton,
     Expander,
     FlipView,
     InfoBar,
@@ -91,6 +92,7 @@ pub enum GallerySampleKind {
     TimePicker,
     TreeView,
     TwoPaneView,
+    Viewbox,
     TabView,
 }
 
@@ -178,6 +180,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         description: "Adaptive two-pane layout with wrapper-owned Winio pane containers.",
     },
     GallerySampleDescriptor {
+        kind: GallerySampleKind::Viewbox,
+        id: "viewbox",
+        title: "Viewbox",
+        section: Some(GallerySectionId::Layout),
+        keywords: &["layout", "scale", "content"],
+        description: "Native Viewbox scaling a wrapper-owned Canvas of Winio content.",
+    },
+    GallerySampleDescriptor {
         kind: GallerySampleKind::PersonPicture,
         id: "person-picture",
         title: "PersonPicture",
@@ -248,6 +258,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["split", "button", "flyout", "action"],
         description: "Native SplitButton with owned flyout content.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::ToggleSplitButton,
+        id: "toggle-split-button",
+        title: "ToggleSplitButton",
+        section: Some(GallerySectionId::BasicInput),
+        keywords: &["toggle", "split", "button", "flyout", "checked"],
+        description: "Native ToggleSplitButton with typed check-state and flyout lifecycle events.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ColorPicker,
@@ -441,11 +459,19 @@ mod tests {
             Some(GallerySectionId::Layout)
         );
         assert_eq!(
+            by_id("viewbox").unwrap().section,
+            Some(GallerySectionId::Layout)
+        );
+        assert_eq!(
             by_id("rating-control").unwrap().section,
             Some(GallerySectionId::BasicInput)
         );
         assert_eq!(
             by_id("split-button").unwrap().section,
+            Some(GallerySectionId::BasicInput)
+        );
+        assert_eq!(
+            by_id("toggle-split-button").unwrap().section,
             Some(GallerySectionId::BasicInput)
         );
         assert_eq!(
@@ -524,7 +550,9 @@ mod tests {
             ("info-badge", GallerySampleKind::InfoBadge),
             ("progress-bar", GallerySampleKind::ProgressBar),
             ("two-pane-view", GallerySampleKind::TwoPaneView),
+            ("viewbox", GallerySampleKind::Viewbox),
             ("tab-view", GallerySampleKind::TabView),
+            ("toggle-split-button", GallerySampleKind::ToggleSplitButton),
             ("progress-bar", GallerySampleKind::ProgressBar),
             ("radio-buttons", GallerySampleKind::RadioButtons),
             ("selector-bar", GallerySampleKind::SelectorBar),

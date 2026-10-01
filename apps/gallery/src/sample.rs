@@ -62,6 +62,11 @@ pub async fn create_sample(
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::ToggleSplitButton => {
+            Child::<samples::toggle_split_button::ToggleSplitButtonSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::CalendarDatePicker => {
             Child::<samples::calendar_date_picker::CalendarDatePickerSample>::init(init)
                 .await?
@@ -158,6 +163,9 @@ pub async fn create_sample(
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::Viewbox => Child::<samples::viewbox::ViewboxSample>::init(init)
+            .await?
+            .into_boxed(),
         GallerySampleKind::TabView => Child::<samples::tab_view::TabViewSample>::init(init)
             .await?
             .into_boxed(),

@@ -33,9 +33,11 @@ mod controls {
     mod teaching_tip;
     mod time_picker;
     mod toggle_button;
+    mod toggle_split_button;
     mod toggle_switch;
     mod tree_view;
     mod two_pane_view;
+    mod viewbox;
 
     pub use auto_suggest_box::{
         AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxItemDescriptor, AutoSuggestBoxMessage,
@@ -88,12 +90,16 @@ mod controls {
     };
     pub use time_picker::{TimePicker, TimePickerEvent, TimePickerMessage};
     pub use toggle_button::{ToggleButton, ToggleButtonEvent, ToggleButtonMessage};
+    pub use toggle_split_button::{
+        ToggleSplitButton, ToggleSplitButtonEvent, ToggleSplitButtonMessage,
+    };
     pub use toggle_switch::{ToggleSwitch, ToggleSwitchEvent, ToggleSwitchMessage};
     pub use tree_view::{TreeView, TreeViewEvent, TreeViewMessage, TreeViewNodeDescriptor};
     pub use two_pane_view::{
         TwoPaneView, TwoPaneViewMessage, TwoPaneViewMode, TwoPaneViewPriority,
         TwoPaneViewTallModeConfiguration, TwoPaneViewWideModeConfiguration,
     };
+    pub use viewbox::Viewbox;
 }
 
 pub use controls::*;
