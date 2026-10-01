@@ -12,6 +12,7 @@ mod controls {
     mod navigation_view;
     mod number_box;
     mod rating_control;
+    mod split_button;
     mod teaching_tip;
     mod toggle_button;
     mod toggle_switch;
@@ -33,6 +34,7 @@ mod controls {
     };
     pub use number_box::{NumberBox, NumberBoxEvent, NumberBoxMessage, NumberBoxSpinPlacement};
     pub use rating_control::{RatingControl, RatingControlEvent, RatingControlMessage};
+    pub use split_button::{SplitButton, SplitButtonEvent, SplitButtonMessage};
     pub use teaching_tip::{
         TeachingTip, TeachingTipCloseReason, TeachingTipEvent, TeachingTipMessage,
         TeachingTipPlacement,

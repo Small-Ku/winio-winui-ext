@@ -578,6 +578,33 @@ try {
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — tree invoked: leaf'
     $treeOutput = Wait-Text $window 'invoked: leaf'
 
+    Select-NavigationSample $window 'Basic input' 'SplitButton'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — SplitButton'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'SplitButton route did not keep one page-level ScrollViewer.' }
+    $splitCondition = [System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::SplitButton),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.SplitButton'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Save'))
+    $split = Wait-Element $window $splitCondition 'native SplitButton'
+    ([System.Windows.Automation.InvokePattern]$split.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample split-button: primary click'
+    $splitOutput = Wait-Text $window 'primary click'
+    $split = Wait-Element $window $splitCondition 'native SplitButton after primary click'
+    $splitExpand = [System.Windows.Automation.ExpandCollapsePattern]$split.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+    if ($splitExpand.Current.ExpandCollapseState -ne [System.Windows.Automation.ExpandCollapseState]::Collapsed) { throw 'SplitButton flyout did not start collapsed.' }
+    $splitExpand.Expand()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample split-button: flyout opened'
+    $splitOutput = Wait-Text $window 'flyout opened'
+    $secondary = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
+        $pc,
+        (Condition ([System.Windows.Automation.ControlType]::Text) 'Secondary action'))) 'SplitButton flyout Winio content'
+    if ($secondary.Current.IsOffscreen) { throw 'SplitButton flyout content remained offscreen after expansion.' }
+    $split = Wait-Element $window $splitCondition 'native SplitButton after flyout open'
+    $splitExpand = [System.Windows.Automation.ExpandCollapsePattern]$split.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+    if ($splitExpand.Current.ExpandCollapseState -ne [System.Windows.Automation.ExpandCollapseState]::Expanded) { throw 'SplitButton UIA state did not become expanded.' }
+    $splitExpand.Collapse()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample split-button: flyout closed'
+    $splitOutput = Wait-Text $window 'flyout closed'
     Select-NavigationSample $window 'Dialogs and flyouts' 'TeachingTip'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — TeachingTip'
     $target = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Open TeachingTip') 'TeachingTip target'
@@ -612,7 +639,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; native Expander nested-content ownership and expand/collapse event path; InfoBar; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; native Expander nested-content ownership and expand/collapse event path; SplitButton primary invoke and owned flyout lifecycle; InfoBar; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

@@ -65,6 +65,7 @@ pub enum GallerySampleKind {
     InfoBar,
     NumberBox,
     RatingControl,
+    SplitButton,
     TeachingTip,
     TreeView,
 }
@@ -135,6 +136,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["rating", "stars", "score", "value"],
         description: "Native RatingControl with typed value changes.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::SplitButton,
+        id: "split-button",
+        title: "SplitButton",
+        section: Some(GallerySectionId::BasicInput),
+        keywords: &["split", "button", "flyout", "action"],
+        description: "Native SplitButton with owned flyout content.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::TeachingTip,
@@ -241,6 +250,10 @@ mod tests {
         );
         assert_eq!(
             by_id("rating-control").unwrap().section,
+            Some(GallerySectionId::BasicInput)
+        );
+        assert_eq!(
+            by_id("split-button").unwrap().section,
             Some(GallerySectionId::BasicInput)
         );
         assert_eq!(

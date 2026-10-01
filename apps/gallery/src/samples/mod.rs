@@ -3,6 +3,7 @@ pub mod info_bar;
 pub mod number_box;
 pub mod overview;
 pub mod rating_control;
+pub mod split_button;
 pub mod teaching_tip;
 pub mod toggle_button;
 pub mod toggle_switch;

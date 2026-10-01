@@ -62,6 +62,11 @@ pub async fn create_sample(
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::SplitButton => {
+            Child::<samples::split_button::SplitButtonSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::TeachingTip => {
             Child::<samples::teaching_tip::TeachingTipSample>::init(init)
                 .await?
