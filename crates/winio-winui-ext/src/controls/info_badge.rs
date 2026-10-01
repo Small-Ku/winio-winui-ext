@@ -1,10 +1,8 @@
-use windows::core::HSTRING;
 use windows::core::Interface;
 use winio::elm::{Component, ComponentSender};
 use winio::handle::{AsWidget, BorrowedContainer, BorrowedWidget};
 use winio::primitive::{Enable, Failable, Layoutable, Point, Size, Visible};
 use winio::{Error, Result};
-use winio_winui_bindings::Microsoft::UI::Xaml::Automation::AutomationProperties;
 use winio_winui_bindings::Microsoft::UI::Xaml::Controls::InfoBadge as NativeInfoBadge;
 
 use crate::native::NativeElement;
@@ -81,7 +79,6 @@ impl Component for InfoBadge {
 
     async fn init(parent: Self::Init<'_>, _sender: &ComponentSender<Self>) -> Result<Self> {
         let native = NativeInfoBadge::new()?;
-        AutomationProperties::SetAutomationId(&native, &HSTRING::from("info-badge-control"))?;
         let framework_element =
             native.cast::<winio_winui3::Microsoft::UI::Xaml::FrameworkElement>()?;
         let element = NativeElement::new(parent, framework_element)?;

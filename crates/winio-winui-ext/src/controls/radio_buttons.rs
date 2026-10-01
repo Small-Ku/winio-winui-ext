@@ -138,7 +138,6 @@ impl Component for RadioButtons {
     type Message = RadioButtonsMessage;
     async fn init(parent: Self::Init<'_>, sender: &ComponentSender<Self>) -> Result<Self> {
         let native = NativeRadioButtons::new()?;
-        AutomationProperties::SetAutomationId(&native, &HSTRING::from("radio-buttons-control"))?;
         let event_native = native.clone();
         let event_sender = sender.clone();
         let token =

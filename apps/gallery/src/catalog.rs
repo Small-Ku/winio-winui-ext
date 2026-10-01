@@ -103,30 +103,6 @@ pub struct GallerySampleDescriptor {
 
 pub const CATALOG: &[GallerySampleDescriptor] = &[
     GallerySampleDescriptor {
-        kind: GallerySampleKind::InfoBadge,
-        id: "info-badge",
-        title: "InfoBadge",
-        section: Some(GallerySectionId::StatusInfo),
-        keywords: &["badge", "notification", "count", "value"],
-        description: "Native InfoBadge with a numeric value round-trip.",
-    },
-    GallerySampleDescriptor {
-        kind: GallerySampleKind::RadioButtons,
-        id: "radio-buttons",
-        title: "RadioButtons",
-        section: Some(GallerySectionId::BasicInput),
-        keywords: &["radio", "selection", "options"],
-        description: "Native RadioButtons container with stable option IDs.",
-    },
-    GallerySampleDescriptor {
-        kind: GallerySampleKind::SelectorBar,
-        id: "selector-bar",
-        title: "SelectorBar",
-        section: Some(GallerySectionId::Collections),
-        keywords: &["selector", "tabs", "selection"],
-        description: "Native SelectorBar with stable item IDs.",
-    },
-    GallerySampleDescriptor {
         kind: GallerySampleKind::Overview,
         id: "overview",
         title: "Home",
@@ -149,6 +125,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["toggle", "switch", "boolean", "state"],
         description: "Native ToggleSwitch with typed on/off events.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::RadioButtons,
+        id: "radio-buttons",
+        title: "RadioButtons",
+        section: Some(GallerySectionId::BasicInput),
+        keywords: &["radio", "selection", "options"],
+        description: "Native RadioButtons container with stable option IDs.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::CalendarDatePicker,
@@ -197,6 +181,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::StatusInfo),
         keywords: &["info", "status", "message"],
         description: "Supplemental native InfoBar.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::InfoBadge,
+        id: "info-badge",
+        title: "InfoBadge",
+        section: Some(GallerySectionId::StatusInfo),
+        keywords: &["badge", "notification", "count", "value"],
+        description: "Native InfoBadge with a numeric value round-trip.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::NumberBox,
@@ -293,6 +285,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::Collections),
         keywords: &["pips", "pager", "page", "carousel", "navigation"],
         description: "Native PipsPager with explicit navigation buttons and typed selection changes.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::SelectorBar,
+        id: "selector-bar",
+        title: "SelectorBar",
+        section: Some(GallerySectionId::Collections),
+        keywords: &["selector", "tabs", "selection"],
+        description: "Native SelectorBar with stable item IDs.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::FlipView,

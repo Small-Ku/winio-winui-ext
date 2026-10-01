@@ -148,7 +148,6 @@ impl Component for SelectorBar {
     type Message = SelectorBarMessage;
     async fn init(parent: Self::Init<'_>, sender: &ComponentSender<Self>) -> Result<Self> {
         let native = NativeSelectorBar::new()?;
-        AutomationProperties::SetAutomationId(&native, &HSTRING::from("selector-bar-control"))?;
         let event_native = native.clone();
         let event_sender = sender.clone();
         let token = native.SelectionChanged(&TypedEventHandler::<
