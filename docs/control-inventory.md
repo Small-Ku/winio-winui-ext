@@ -61,6 +61,7 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 | `InfoBar` | supplemental | Native activation/hosting and visible InfoBar message in UIA. |
 | `NavigationView` | supplemental + upstream shared bases | Recursive main/footer descriptors, stable IDs, native symbol icons, settings/pane/header/back APIs and duplicate-chrome suppression; UIA verifies hierarchical routing and TitleBar-driven pane compact/reopen. |
 | `NumberBox` | supplemental | Value/range/small-change/spin placement; typed `ValueChanged`; UIA RangeValue sets `42`. |
+| `PersonPicture` | supplemental | Display name, initials, badge number/text/glyph, group state and small-image preference. Gallery composes its visible output from native property getters after setting `Ada Lovelace`, `AL` and badge `3`. |
 | `RatingControl` | supplemental | Value, max rating, read-only/clear settings, caption and typed value-change events; Gallery UIA verifies native RangeValue 3→4 with max 5. |
 | `SplitButton` | supplemental | Native primary `Click` event plus explicit flyout container; Winio children are created under the flyout Canvas, with flyout open/close events and UIA invoke/expand-collapse coverage. |
 | `TimePicker` | supplemental | Uses `std::time::Duration` for time-of-day values, exposes header/clock/minute-increment APIs and typed old/new time events. Gallery UIA opens the native picker, selects hour 11 and minute 45, accepts, and observes `10:30 → 11:45`. |

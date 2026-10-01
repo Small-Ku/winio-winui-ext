@@ -7,6 +7,7 @@ pub mod info_bar;
 pub mod menu_bar;
 pub mod number_box;
 pub mod overview;
+pub mod person_picture;
 pub mod rating_control;
 pub mod split_button;
 pub mod teaching_tip;

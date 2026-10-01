@@ -177,9 +177,28 @@ function Assert-SourceViewerContract($SourceViewer, [string]$Marker) {
 
 }function Select-NavigationSample($Window, [string]$Section, [string]$Sample) {
     $sectionElement = Wait-Element $Window (Condition ([System.Windows.Automation.ControlType]::ListItem) $Section) "NavigationView section '$Section'"
+    try {
+        ([System.Windows.Automation.ScrollItemPattern]$sectionElement.GetCurrentPattern([System.Windows.Automation.ScrollItemPattern]::Pattern)).ScrollIntoView()
+    } catch {}
     $expand = [System.Windows.Automation.ExpandCollapsePattern]$sectionElement.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
-    if ($expand.Current.ExpandCollapseState -eq [System.Windows.Automation.ExpandCollapseState]::Collapsed) { $expand.Expand() }
-    $item = Wait-Element $Window (Condition ([System.Windows.Automation.ControlType]::ListItem) $Sample) "NavigationView sample '$Sample'"
+    if ($expand.Current.ExpandCollapseState -eq [System.Windows.Automation.ExpandCollapseState]::Collapsed) {
+        $expand.Expand()
+        Start-Sleep -Milliseconds 100
+    }
+    $condition = Condition ([System.Windows.Automation.ControlType]::ListItem) $Sample
+    $item = $Window.FindFirst($descendants, $condition)
+    if ($null -eq $item) {
+        # A long NavigationView pane virtualizes child peers just outside the viewport.
+        # Re-anchor the section and reopen it so the requested child is realized.
+        $expand.Collapse()
+        Start-Sleep -Milliseconds 50
+        try {
+            ([System.Windows.Automation.ScrollItemPattern]$sectionElement.GetCurrentPattern([System.Windows.Automation.ScrollItemPattern]::Pattern)).ScrollIntoView()
+        } catch {}
+        $expand.Expand()
+        Start-Sleep -Milliseconds 150
+        $item = Wait-Element $Window $condition "NavigationView sample '$Sample'"
+    }
     ([System.Windows.Automation.SelectionItemPattern]$item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
 }
 
@@ -546,6 +565,10 @@ try {
         throw 'Narrow ToggleButton cards, Output, or Options regions overlap instead of stacking.'
     }
 
+    Select-NavigationSample $window 'Status and info' 'PersonPicture'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — PersonPicture'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'PersonPicture route did not keep one page-level ScrollViewer.' }
+    $personOutput = Wait-Text $window 'Ada Lovelace · initials AL · badge 3'
     Select-NavigationSample $window 'Status and info' 'InfoBar'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — InfoBar'
     $info = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Text) 'Supplemental InfoBar canary') 'InfoBar canary message'
@@ -797,7 +820,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; InfoBar; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBar; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

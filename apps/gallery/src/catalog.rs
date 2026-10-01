@@ -74,6 +74,7 @@ pub enum GallerySampleKind {
     InfoBar,
     MenuBar,
     NumberBox,
+    PersonPicture,
     RatingControl,
     SplitButton,
     TeachingTip,
@@ -131,6 +132,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::Layout),
         keywords: &["expander", "expand", "collapse", "layout", "content"],
         description: "Native Expander hosting Winio-owned nested content.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::PersonPicture,
+        id: "person-picture",
+        title: "PersonPicture",
+        section: Some(GallerySectionId::StatusInfo),
+        keywords: &["person", "picture", "avatar", "initials", "badge"],
+        description: "Native PersonPicture with display-name, initials, and badge state.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::InfoBar,
@@ -318,6 +327,10 @@ mod tests {
         assert_eq!(
             by_id("split-button").unwrap().section,
             Some(GallerySectionId::BasicInput)
+        );
+        assert_eq!(
+            by_id("person-picture").unwrap().section,
+            Some(GallerySectionId::StatusInfo)
         );
         assert_eq!(
             by_id("info-bar").unwrap().section,
