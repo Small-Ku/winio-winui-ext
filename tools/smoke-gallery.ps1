@@ -709,6 +709,32 @@ try {
         $automation::AutomationIdProperty, 'HexTextBox')) 'ColorPicker HexTextBox after edit'
     $hexValue = [System.Windows.Automation.ValuePattern]$hexInput.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
     if ($hexValue.Current.Value -ne '#112233') { throw "ColorPicker edited hex value was '$($hexValue.Current.Value)'." }
+    Select-NavigationSample $window 'Basic input' 'CalendarDatePicker'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — CalendarDatePicker'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'CalendarDatePicker route did not keep one page-level ScrollViewer.' }
+    $calendarDatePicker = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'CalendarDatePicker'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Calendar date'))) 'native CalendarDatePicker'
+    ([System.Windows.Automation.InvokePattern]$calendarDatePicker.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $calendarView = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
+        $pc,
+        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'CalendarView'))) 'CalendarDatePicker CalendarView'
+    $calendarSelection = [System.Windows.Automation.SelectionPattern]$calendarView.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
+    $calendarCurrent = $calendarSelection.Current.GetSelection() | Select-Object -First 1
+    if ($null -eq $calendarCurrent) { throw 'CalendarDatePicker CalendarView had no selected day.' }
+    $calendarWalker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+    $calendarNext = $calendarWalker.GetNextSibling($calendarCurrent)
+    if ($null -eq $calendarNext) { throw 'CalendarDatePicker selected day had no next sibling.' }
+    ([System.Windows.Automation.SelectionItemPattern]$calendarNext.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample calendar-date-picker: 2026-10-02'
+    $calendarDateOutput = Wait-Text $window '2026-10-02'
+    $calendarDatePicker = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'CalendarDatePicker'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Calendar date'))) 'CalendarDatePicker after selection'
+    $calendarDateValue = [System.Windows.Automation.ValuePattern]$calendarDatePicker.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
+    if ($calendarDateValue.Current.Value -notmatch '2') { throw "CalendarDatePicker ValuePattern did not reflect the next day: '$($calendarDateValue.Current.Value)'." }
     Select-NavigationSample $window 'Basic input' 'DatePicker'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — DatePicker'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'DatePicker route did not keep one page-level ScrollViewer.' }
@@ -914,7 +940,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBar; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBar; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

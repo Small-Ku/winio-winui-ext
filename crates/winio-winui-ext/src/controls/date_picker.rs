@@ -17,7 +17,7 @@ const WINDOWS_EPOCH_JULIAN_DAY: i32 = 2_305_814;
 const TICKS_PER_DAY: i64 = 864_000_000_000;
 const E_INVALIDARG: HRESULT = HRESULT(0x80070057u32 as i32);
 
-fn to_native_date(value: Date) -> Result<NativeDateTime> {
+pub(super) fn to_native_date(value: Date) -> Result<NativeDateTime> {
     let days = i64::from(value.to_julian_day() - WINDOWS_EPOCH_JULIAN_DAY);
     let ticks = days
         .checked_mul(TICKS_PER_DAY)
@@ -27,7 +27,7 @@ fn to_native_date(value: Date) -> Result<NativeDateTime> {
     })
 }
 
-fn from_native_date(value: NativeDateTime) -> Result<Date> {
+pub(super) fn from_native_date(value: NativeDateTime) -> Result<Date> {
     let days = value.UniversalTime.div_euclid(TICKS_PER_DAY);
     let julian_day = i64::from(WINDOWS_EPOCH_JULIAN_DAY)
         .checked_add(days)

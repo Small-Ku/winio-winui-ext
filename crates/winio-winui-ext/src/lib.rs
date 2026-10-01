@@ -6,6 +6,7 @@ mod native;
 
 mod controls {
     mod auto_suggest_box;
+    mod calendar_date_picker;
     mod color_picker;
     mod command_bar;
     mod content_dialog;
@@ -31,6 +32,9 @@ mod controls {
     pub use auto_suggest_box::{
         AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxItemDescriptor, AutoSuggestBoxMessage,
         AutoSuggestBoxTextChangeReason,
+    };
+    pub use calendar_date_picker::{
+        CalendarDatePicker, CalendarDatePickerEvent, CalendarDatePickerMessage,
     };
     pub use color_picker::{ColorPicker, ColorPickerEvent, ColorPickerMessage};
     pub use command_bar::{CommandBar, CommandBarAction, CommandBarEvent, CommandBarMessage};
