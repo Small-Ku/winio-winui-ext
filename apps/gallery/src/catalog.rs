@@ -59,6 +59,7 @@ impl GallerySectionId {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum GallerySampleKind {
     Overview,
+    DropDownButton,
     ToggleButton,
     ToggleSwitch,
     Expander,
@@ -104,6 +105,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["toggle", "switch", "boolean", "state"],
         description: "Native ToggleSwitch with typed on/off events.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::DropDownButton,
+        id: "drop-down-button",
+        title: "DropDownButton",
+        section: Some(GallerySectionId::BasicInput),
+        keywords: &["drop", "down", "button", "flyout", "menu"],
+        description: "Native DropDownButton with Winio-owned attached flyout content.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::Expander,
@@ -242,6 +251,10 @@ mod tests {
         );
         assert_eq!(
             by_id("toggle-switch").unwrap().section,
+            Some(GallerySectionId::BasicInput)
+        );
+        assert_eq!(
+            by_id("drop-down-button").unwrap().section,
             Some(GallerySectionId::BasicInput)
         );
         assert_eq!(
