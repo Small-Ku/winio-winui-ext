@@ -71,6 +71,40 @@ function Wait-Element($Window, $Condition, [string]$Description) {
     } while ([DateTime]::UtcNow -lt $deadline)
     throw "Timed out finding $Description."
 }
+function Find-ProcessElement($Window, $ProcessCondition, $Condition) {
+    try {
+        $element = $Window.FindFirst($descendants, $Condition)
+        if ($null -ne $element) { return $element }
+    } catch {
+        # The main WinUI peer can be transiently stale while popups are opening/closing.
+    }
+    try {
+        $topLevels = $root.FindAll($children, $ProcessCondition)
+    } catch {
+        return $null
+    }
+    for ($i = 0; $i -lt $topLevels.Count; $i++) {
+        $candidate = $topLevels.Item($i)
+        try {
+            $element = $candidate.FindFirst([System.Windows.Automation.TreeScope]::Element, $Condition)
+            if ($null -ne $element) { return $element }
+            $element = $candidate.FindFirst($descendants, $Condition)
+            if ($null -ne $element) { return $element }
+        } catch {
+            # A transient popup HWND may disappear while its automation tree is queried.
+        }
+    }
+    return $null
+}
+function Wait-ProcessElement($Window, $ProcessCondition, $Condition, [string]$Description) {
+    $deadline = [DateTime]::UtcNow.AddSeconds(15)
+    do {
+        $element = Find-ProcessElement $Window $ProcessCondition $Condition
+        if ($null -ne $element) { return $element }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw "Timed out finding $Description."
+}
 function Wait-Text($Window, [string]$Name) {
     return Wait-Element $Window (Condition ([System.Windows.Automation.ControlType]::Text) $Name) "visible text '$Name'"
 }
@@ -119,6 +153,17 @@ function Wait-ScrollViewer($Window) {
         Start-Sleep -Milliseconds 100
     } while ([DateTime]::UtcNow -lt $deadline)
     throw 'Timed out finding routed page ScrollViewer.'
+}
+function Wait-SinglePageScrollViewer($Window, [string]$Description) {
+    $deadline = [DateTime]::UtcNow.AddSeconds(8)
+    $count = 0
+    do {
+        $viewers = Get-PageScrollViewers $Window
+        $count = $viewers.Count
+        if ($count -eq 1) { return $viewers[0] }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    throw "$Description did not settle to one page-level ScrollViewer (count=$count)."
 }
 function Wait-CardSourceToggle($Window, [string]$CardName) {
     return Wait-Element $Window (Condition ([System.Windows.Automation.ControlType]::Button) "Source code — $CardName") "Source code toggle for $CardName"
@@ -586,7 +631,7 @@ try {
 
     Select-NavigationSample $window 'Basic input' 'ToggleButton'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ToggleButton'
-    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'Narrow ToggleButton route did not keep one page ScrollViewer.' }
+    $null = Wait-SinglePageScrollViewer $window 'Narrow ToggleButton route'
     $narrowThree = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Three-state sample') 'narrow three-state example'
     $narrowBasic = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Two-state sample') 'narrow basic example'
     $narrowOption = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Three-state: On') 'narrow ToggleButton option'
@@ -763,9 +808,7 @@ try {
     $dropDownExpand.Expand()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample drop-down-button: flyout opened'
     $dropDownOutput = Wait-Text $window 'flyout opened'
-    $dropDownChoice = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        (Condition ([System.Windows.Automation.ControlType]::Text) 'PDF document'))) 'DropDownButton flyout Winio content'
+    $dropDownChoice = Wait-ProcessElement $window $pc (Condition ([System.Windows.Automation.ControlType]::Text) 'PDF document') 'DropDownButton flyout Winio content'
     if ($dropDownChoice.Current.IsOffscreen) { throw 'DropDownButton flyout content remained offscreen after expansion.' }
     $dropDown = Wait-Element $window $dropDownCondition 'native DropDownButton after flyout open'
     $dropDownExpand = [System.Windows.Automation.ExpandCollapsePattern]$dropDown.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
@@ -790,9 +833,7 @@ try {
     $splitExpand.Expand()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample split-button: flyout opened'
     $splitOutput = Wait-Text $window 'flyout opened'
-    $secondary = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        (Condition ([System.Windows.Automation.ControlType]::Text) 'Secondary action'))) 'SplitButton flyout Winio content'
+    $secondary = Wait-ProcessElement $window $pc (Condition ([System.Windows.Automation.ControlType]::Text) 'Secondary action') 'SplitButton flyout Winio content'
     if ($secondary.Current.IsOffscreen) { throw 'SplitButton flyout content remained offscreen after expansion.' }
     $split = Wait-Element $window $splitCondition 'native SplitButton after flyout open'
     $splitExpand = [System.Windows.Automation.ExpandCollapsePattern]$split.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
@@ -818,9 +859,7 @@ try {
     $toggleSplitExpand = [System.Windows.Automation.ExpandCollapsePattern]$toggleSplit.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
     $toggleSplitExpand.Expand()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample toggle-split-button: flyout opened'
-    $null = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        (Condition ([System.Windows.Automation.ControlType]::Text) 'Choose formatting options'))) 'ToggleSplitButton flyout Winio content'
+    $null = Wait-ProcessElement $window $pc (Condition ([System.Windows.Automation.ControlType]::Text) 'Choose formatting options') 'ToggleSplitButton flyout Winio content'
     $toggleSplit = Wait-Element $window $toggleSplitCondition 'ToggleSplitButton while flyout is open'
     $toggleSplitPattern = [System.Windows.Automation.TogglePattern]$toggleSplit.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
     if ($toggleSplitPattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::On) { throw 'Opening ToggleSplitButton flyout changed its checked state.' }
@@ -851,9 +890,8 @@ try {
         [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'CalendarDatePicker'),
         [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Calendar date'))) 'native CalendarDatePicker'
     ([System.Windows.Automation.InvokePattern]$calendarDatePicker.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
-    $calendarView = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'CalendarView'))) 'CalendarDatePicker CalendarView'
+    $calendarView = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'CalendarView')) 'CalendarDatePicker CalendarView'
     $calendarSelection = [System.Windows.Automation.SelectionPattern]$calendarView.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
     $calendarCurrent = $calendarSelection.Current.GetSelection() | Select-Object -First 1
     if ($null -eq $calendarCurrent) { throw 'CalendarDatePicker CalendarView had no selected day.' }
@@ -877,9 +915,8 @@ try {
     ([System.Windows.Automation.InvokePattern]$dateFlyoutButton.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
 
     $dateWalker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
-    $monthSelector = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'MonthLoopingSelector'))) 'DatePicker month selector'
+    $monthSelector = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'MonthLoopingSelector')) 'DatePicker month selector'
     $monthSelection = [System.Windows.Automation.SelectionPattern]$monthSelector.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
     $currentMonth = $monthSelection.Current.GetSelection() | Select-Object -First 1
     if ($null -eq $currentMonth) { throw 'DatePicker month selector had no selected item.' }
@@ -887,9 +924,8 @@ try {
     if ($null -eq $nextMonth) { throw 'DatePicker month selector had no next item.' }
     ([System.Windows.Automation.SelectionItemPattern]$nextMonth.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
 
-    $daySelector = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'DayLoopingSelector'))) 'DatePicker day selector'
+    $daySelector = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'DayLoopingSelector')) 'DatePicker day selector'
     $daySelection = [System.Windows.Automation.SelectionPattern]$daySelector.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
     $currentDay = $daySelection.Current.GetSelection() | Select-Object -First 1
     if ($null -eq $currentDay) { throw 'DatePicker day selector had no selected item.' }
@@ -897,9 +933,8 @@ try {
     if ($null -eq $nextDay) { throw 'DatePicker day selector had no next item.' }
     ([System.Windows.Automation.SelectionItemPattern]$nextDay.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
 
-    $dateAccept = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'AcceptButton'))) 'DatePicker AcceptButton'
+    $dateAccept = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'AcceptButton')) 'DatePicker AcceptButton'
     ([System.Windows.Automation.InvokePattern]$dateAccept.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample date-picker: 2026-11-02'
     $dateOutput = Wait-Text $window '2026-11-02'
@@ -922,12 +957,10 @@ try {
         $automation::AutomationIdProperty, 'FlyoutButton')) 'TimePicker FlyoutButton'
     ([System.Windows.Automation.InvokePattern]$timeFlyoutButton.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
 
-    $hourSelector = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'HourLoopingSelector'))) 'TimePicker hour selector'
-    $minuteSelector = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'MinuteLoopingSelector'))) 'TimePicker minute selector'
+    $hourSelector = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'HourLoopingSelector')) 'TimePicker hour selector'
+    $minuteSelector = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'MinuteLoopingSelector')) 'TimePicker minute selector'
 
     $hour11 = Wait-Element $hourSelector ([System.Windows.Automation.AndCondition]::new(
         [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem),
@@ -949,9 +982,8 @@ try {
     if (-not $hour11Selected.Current.IsSelected) { throw 'TimePicker hour selector did not select 11.' }
     if (-not $minute45Selected.Current.IsSelected) { throw 'TimePicker minute selector did not select 45.' }
 
-    $timeAccept = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'AcceptButton'))) 'TimePicker AcceptButton'
+    $timeAccept = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'AcceptButton')) 'TimePicker AcceptButton'
     ([System.Windows.Automation.InvokePattern]$timeAccept.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample time-picker: 11:45'
     $timeOutput = Wait-Text $window '11:45'
@@ -968,12 +1000,11 @@ try {
     $moreButton = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
         $automation::AutomationIdProperty, 'MoreButton')) 'CommandBar MoreButton'
     ([System.Windows.Automation.InvokePattern]$moreButton.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
-    $commandSettings = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        [System.Windows.Automation.AndCondition]::new(
-            [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button),
-            [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'AppBarButton'),
-            [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Settings')))) 'CommandBar secondary Settings action'
+    $commandSettingsCondition = [System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'AppBarButton'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Settings'))
+    $commandSettings = Wait-ProcessElement $window $pc $commandSettingsCondition 'CommandBar secondary Settings action'
     if ($commandSettings.Current.IsOffscreen) { throw 'CommandBar secondary Settings action remained offscreen after opening overflow.' }
     ([System.Windows.Automation.InvokePattern]$commandSettings.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample command-bar: action:settings'
@@ -981,34 +1012,75 @@ try {
     Select-NavigationSample $window 'Menus and toolbars' 'MenuBar'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — MenuBar'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'MenuBar route did not keep one page-level ScrollViewer.' }
-    $fileMenu = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+    $fileCondition = [System.Windows.Automation.AndCondition]::new(
         [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
         [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.MenuBarItem'),
-        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'File'))) 'MenuBar File menu'
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'File'))
+    $fileMenu = Wait-Element $window $fileCondition 'MenuBar File menu'
     $fileExpand = [System.Windows.Automation.ExpandCollapsePattern]$fileMenu.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
     if ($fileExpand.Current.ExpandCollapseState -ne [System.Windows.Automation.ExpandCollapseState]::Collapsed) { throw 'MenuBar File menu did not start collapsed.' }
-    $fileExpand.Expand()
-    $newAction = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        [System.Windows.Automation.AndCondition]::new(
-            [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
-            [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'MenuFlyoutItem'),
-            [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'New')))) 'MenuBar File/New action'
+    $deadline = [DateTime]::UtcNow.AddSeconds(5)
+    do {
+        $fileMenu = $window.FindFirst($descendants, $fileCondition)
+        if ($null -ne $fileMenu) {
+            $fileExpand = [System.Windows.Automation.ExpandCollapsePattern]$fileMenu.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+            if ($fileExpand.Current.ExpandCollapseState -eq [System.Windows.Automation.ExpandCollapseState]::Expanded) { break }
+            $fileExpand.Expand()
+        }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($null -eq $fileMenu -or $fileExpand.Current.ExpandCollapseState -ne [System.Windows.Automation.ExpandCollapseState]::Expanded) {
+        throw 'MenuBar File menu did not expand.'
+    }
+    $newActionCondition = [System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'MenuFlyoutItem'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'New'))
+    $newAction = Wait-ProcessElement $window $pc $newActionCondition 'MenuBar File/New action'
     if ($newAction.Current.IsOffscreen) { throw 'MenuBar File/New action remained offscreen after expanding File.' }
     ([System.Windows.Automation.InvokePattern]$newAction.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample menu-bar: action:new'
     $menuOutput = Wait-Text $window 'action:new'
-    $helpMenu = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+
+    # Wait for the first menu flyout to finish collapsing before opening a sibling menu.
+    $deadline = [DateTime]::UtcNow.AddSeconds(5)
+    do {
+        $fileMenu = $window.FindFirst($descendants, ([System.Windows.Automation.AndCondition]::new(
+            [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
+            [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.MenuBarItem'),
+            [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'File'))))
+        if ($null -ne $fileMenu) {
+            $fileExpand = [System.Windows.Automation.ExpandCollapsePattern]$fileMenu.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+            if ($fileExpand.Current.ExpandCollapseState -eq [System.Windows.Automation.ExpandCollapseState]::Collapsed) { break }
+        }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($null -eq $fileMenu -or $fileExpand.Current.ExpandCollapseState -ne [System.Windows.Automation.ExpandCollapseState]::Collapsed) {
+        throw 'MenuBar File menu did not settle closed after invoking New.'
+    }
+
+    $helpCondition = [System.Windows.Automation.AndCondition]::new(
         [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
         [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.MenuBarItem'),
-        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Help'))) 'MenuBar Help menu'
-    ([System.Windows.Automation.ExpandCollapsePattern]$helpMenu.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)).Expand()
-    $aboutAction = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        [System.Windows.Automation.AndCondition]::new(
-            [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
-            [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'MenuFlyoutItem'),
-            [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'About')))) 'MenuBar Help/About action'
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Help'))
+    $deadline = [DateTime]::UtcNow.AddSeconds(5)
+    do {
+        $helpMenu = $window.FindFirst($descendants, $helpCondition)
+        if ($null -ne $helpMenu) {
+            $helpExpand = [System.Windows.Automation.ExpandCollapsePattern]$helpMenu.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
+            if ($helpExpand.Current.ExpandCollapseState -eq [System.Windows.Automation.ExpandCollapseState]::Expanded) { break }
+            $helpExpand.Expand()
+        }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($null -eq $helpMenu -or $helpExpand.Current.ExpandCollapseState -ne [System.Windows.Automation.ExpandCollapseState]::Expanded) {
+        throw 'MenuBar Help menu did not expand.'
+    }
+    $aboutActionCondition = [System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'MenuFlyoutItem'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'About'))
+    $aboutAction = Wait-ProcessElement $window $pc $aboutActionCondition 'MenuBar Help/About action'
     ([System.Windows.Automation.InvokePattern]$aboutAction.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample menu-bar: action:about'
     $menuOutput = Wait-Text $window 'action:about'
@@ -1019,23 +1091,19 @@ try {
     ([System.Windows.Automation.TogglePattern]$dialogTarget.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample content-dialog: opened'
     $dialogOutput = Wait-Text $window 'opened'
-    $dialogPopupCondition = [System.Windows.Automation.AndCondition]::new($pc,[System.Windows.Automation.AndCondition]::new(
+    $dialogPopupCondition = [System.Windows.Automation.AndCondition]::new(
         [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Window),
-        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Save changes?')))
-    $dialogPopup = Wait-Element $root $dialogPopupCondition 'native ContentDialog popup'
-    $dialogContent = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        (Condition ([System.Windows.Automation.ControlType]::Text) 'This content is owned by Winio inside the native ContentDialog.'))) 'Winio-owned ContentDialog content'
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Save changes?'))
+    $dialogPopup = Wait-ProcessElement $window $pc $dialogPopupCondition 'native ContentDialog popup'
+    $dialogContent = Wait-ProcessElement $window $pc (Condition ([System.Windows.Automation.ControlType]::Text) 'This content is owned by Winio inside the native ContentDialog.') 'Winio-owned ContentDialog content'
     if ($dialogContent.Current.IsOffscreen) { throw 'ContentDialog Winio-owned content remained offscreen.' }
-    $dialogSave = Wait-Element $root ([System.Windows.Automation.AndCondition]::new(
-        $pc,
-        (Condition ([System.Windows.Automation.ControlType]::Button) 'Save'))) 'ContentDialog primary button'
+    $dialogSave = Wait-ProcessElement $window $pc (Condition ([System.Windows.Automation.ControlType]::Button) 'Save') 'ContentDialog primary button'
     ([System.Windows.Automation.InvokePattern]$dialogSave.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample content-dialog: closing:Primary'
     $dialogOutput = Wait-Text $window 'closing:Primary'
     $deadline = [DateTime]::UtcNow.AddSeconds(8)
     do {
-        $dialogAfter = $root.FindFirst($descendants, $dialogPopupCondition)
+        $dialogAfter = Find-ProcessElement $window $pc $dialogPopupCondition
         if ($null -eq $dialogAfter) { break }
         Start-Sleep -Milliseconds 100
     } while ([DateTime]::UtcNow -lt $deadline)
@@ -1046,20 +1114,20 @@ try {
     ([System.Windows.Automation.TogglePattern]$target.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — teaching tip opened'
     $tipOutput = Wait-Text $window 'opened'
-    $tipPopupCondition = [System.Windows.Automation.AndCondition]::new($pc,[System.Windows.Automation.AndCondition]::new(
+    $tipPopupCondition = [System.Windows.Automation.AndCondition]::new(
         [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Window),
-        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Native TeachingTip canary')))
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Native TeachingTip canary'))
     $deadline = [DateTime]::UtcNow.AddSeconds(10)
     do {
-        $tipPopup = $root.FindFirst($descendants, $tipPopupCondition)
+        $tipPopup = Find-ProcessElement $window $pc $tipPopupCondition
         if ($null -ne $tipPopup) { break }
         Start-Sleep -Milliseconds 100
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -eq $tipPopup) { throw 'TeachingTip native popup was not found.' }
-    $tipCloseCondition = [System.Windows.Automation.AndCondition]::new($pc,[System.Windows.Automation.AndCondition]::new(
+    $tipCloseCondition = [System.Windows.Automation.AndCondition]::new(
         [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button),
-        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'CloseButton')))
-    $tipClose = $root.FindFirst($descendants, $tipCloseCondition)
+        [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'CloseButton'))
+    $tipClose = Find-ProcessElement $window $pc $tipCloseCondition
     if ($null -eq $tipClose) { throw 'TeachingTip native CloseButton was not found.' }
     # Opening the tip is an inner-child message of a boxed routed sample. Give the routed TeachingTip a bounded settle window to finish its native opening transition and re-arm the nested event listener before closing it.
     Start-Sleep -Milliseconds 750
@@ -1068,7 +1136,7 @@ try {
     $tipOutput = Wait-Text $window 'closed:CloseButton'
     $deadline = [DateTime]::UtcNow.AddSeconds(8)
     do {
-        $tipAfter = $root.FindFirst($descendants, $tipPopupCondition)
+        $tipAfter = Find-ProcessElement $window $pc $tipPopupCondition
         if ($null -eq $tipAfter) { break }
         Start-Sleep -Milliseconds 100
     } while ([DateTime]::UtcNow -lt $deadline)
