@@ -14,6 +14,7 @@ mod controls {
     mod drop_down_button;
     mod expander;
     mod flip_view;
+    mod info_badge;
     mod info_bar;
     mod integrated_title_bar;
     mod menu_bar;
@@ -23,7 +24,9 @@ mod controls {
     mod person_picture;
     mod pips_pager;
     mod progress_ring;
+    mod radio_buttons;
     mod rating_control;
+    mod selector_bar;
     mod split_button;
     mod teaching_tip;
     mod time_picker;
@@ -48,6 +51,7 @@ mod controls {
     pub use drop_down_button::{DropDownButton, DropDownButtonEvent, DropDownButtonMessage};
     pub use expander::{Expander, ExpanderEvent, ExpanderMessage};
     pub use flip_view::{FlipView, FlipViewEvent, FlipViewMessage, FlipViewPage};
+    pub use info_badge::{InfoBadge, InfoBadgeMessage};
     pub use info_bar::{InfoBar, InfoBarMessage};
     pub use integrated_title_bar::{
         IntegratedTitleBar, IntegratedTitleBarEvent, IntegratedTitleBarInit,
@@ -65,7 +69,13 @@ mod controls {
         PipsPager, PipsPagerButtonVisibility, PipsPagerEvent, PipsPagerMessage, PipsPagerWrapMode,
     };
     pub use progress_ring::{ProgressRing, ProgressRingMessage};
+    pub use radio_buttons::{
+        RadioButtonOption, RadioButtons, RadioButtonsEvent, RadioButtonsMessage,
+    };
     pub use rating_control::{RatingControl, RatingControlEvent, RatingControlMessage};
+    pub use selector_bar::{
+        SelectorBar, SelectorBarEvent, SelectorBarItemDescriptor, SelectorBarMessage,
+    };
     pub use split_button::{SplitButton, SplitButtonEvent, SplitButtonMessage};
     pub use teaching_tip::{
         TeachingTip, TeachingTipCloseReason, TeachingTipEvent, TeachingTipMessage,

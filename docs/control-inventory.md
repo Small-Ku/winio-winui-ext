@@ -42,6 +42,7 @@ The following examples are absent as public control structs from the compatible 
 - `MenuBar`
 - `CalendarDatePicker`, `DatePicker`, `TimePicker`, `ColorPicker`
 - `ProgressRing`, `RatingControl`, `SplitButton`, `DropDownButton`
+- `BreadcrumbBar`, `InfoBadge`, `RadioButtons`, `SelectorBar`
 
 This list demonstrates supplemental projection availability; it is not a wrapper roadmap promise. The broad generator also follows required dependencies outside the root namespace where bindgen proves they are needed. It does not generate the entire Microsoft metadata universe.
 
@@ -62,6 +63,10 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 | `MenuBar` | supplemental | Descriptor-backed top-level `MenuBarItem` menus with stable `MenuFlyoutItem` action IDs and typed click events. UIA expands File and Help, invokes actions in both flyouts, and observes their IDs. |
 | `Expander` | supplemental | Native expand/collapse state and events; exposes a content Canvas as `AsContainer` so Winio children are constructed under the Expander without reparenting; UIA verifies nested content visibility. |
 | `FlipView` | supplemental | Descriptor-backed native `FlipViewItem` pages, selected index/ID, touch-animation setting and typed selection changes. Gallery UIA uses `ItemContainerPattern` to realize/select virtualized Second page and verifies the native selection plus stable output. |
+| `InfoBadge` | supplemental | Exposes native numeric value; the Gallery reads it back after setting a visible count. |
+| `RadioButtons` | supplemental | Owns native `RadioButton` options with stable IDs, selected index/ID and typed selection changes. |
+| `SelectorBar` | supplemental | Owns `SelectorBarItem` entries with stable IDs, selected index/ID and typed selection changes. |
+
 | `InfoBar` | supplemental | Native activation/hosting and visible InfoBar message in UIA. |
 | `NavigationView` | supplemental + upstream shared bases | Recursive main/footer descriptors, stable IDs, native symbol icons, settings/pane/header/back APIs and duplicate-chrome suppression; UIA verifies hierarchical routing and TitleBar-driven pane compact/reopen. |
 | `NumberBox` | supplemental | Value/range/small-change/spin placement; typed `ValueChanged`; UIA RangeValue sets `42`. |
@@ -74,6 +79,8 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 | `ToggleSwitch` | supplemental | Native `IsOn`/`SetIsOn`, header text, typed `Toggled(bool)` events, and UIA TogglePattern round-trip in the Gallery. |
 | `TeachingTip` | supplemental | Targets an existing Winio widget; native popup close button emits typed `CloseButton` reason through `ComponentSender`. |
 | `TreeView` | supplemental | Recursive stable node descriptors; native `Expanding` and `ItemInvoked`; UIA expands root (`root`) and invokes leaf (`leaf`). |
+
+`BreadcrumbBar` remains unwrapped in this batch: its `ItemsSource` requires a XAML-bindable collection. The safe generic read-only vector view available in the workspace does not realize native item peers, and supplying the required bindable collection would expand this pass into a custom ABI collection implementation.
 
 The wrapper layer remains intentionally selective even though the supplemental projection is broad. New wrappers should be driven by downstream API/lifecycle needs and should add their required-method contract plus a native runtime smoke path where practical. They should not require adding another per-control bindgen filter.
 

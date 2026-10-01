@@ -75,6 +75,7 @@ pub enum GallerySampleKind {
     Expander,
     FlipView,
     InfoBar,
+    InfoBadge,
     MenuBar,
     NumberBox,
     PersonPicture,
@@ -82,7 +83,9 @@ pub enum GallerySampleKind {
     ProgressRing,
     PasswordBox,
     RatingControl,
+    RadioButtons,
     SplitButton,
+    SelectorBar,
     TeachingTip,
     TimePicker,
     TreeView,
@@ -99,6 +102,30 @@ pub struct GallerySampleDescriptor {
 }
 
 pub const CATALOG: &[GallerySampleDescriptor] = &[
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::InfoBadge,
+        id: "info-badge",
+        title: "InfoBadge",
+        section: Some(GallerySectionId::StatusInfo),
+        keywords: &["badge", "notification", "count", "value"],
+        description: "Native InfoBadge with a numeric value round-trip.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::RadioButtons,
+        id: "radio-buttons",
+        title: "RadioButtons",
+        section: Some(GallerySectionId::BasicInput),
+        keywords: &["radio", "selection", "options"],
+        description: "Native RadioButtons container with stable option IDs.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::SelectorBar,
+        id: "selector-bar",
+        title: "SelectorBar",
+        section: Some(GallerySectionId::Collections),
+        keywords: &["selector", "tabs", "selection"],
+        description: "Native SelectorBar with stable item IDs.",
+    },
     GallerySampleDescriptor {
         kind: GallerySampleKind::Overview,
         id: "overview",
@@ -442,6 +469,25 @@ mod tests {
             by_id("tree-view").unwrap().section,
             Some(GallerySectionId::Collections)
         );
+        assert_eq!(
+            by_id("info-badge").unwrap().section,
+            Some(GallerySectionId::StatusInfo)
+        );
+        assert_eq!(
+            by_id("radio-buttons").unwrap().section,
+            Some(GallerySectionId::BasicInput)
+        );
+        assert_eq!(
+            by_id("selector-bar").unwrap().section,
+            Some(GallerySectionId::Collections)
+        );
+        for (id, kind) in [
+            ("info-badge", GallerySampleKind::InfoBadge),
+            ("radio-buttons", GallerySampleKind::RadioButtons),
+            ("selector-bar", GallerySampleKind::SelectorBar),
+        ] {
+            assert_eq!(by_id(id).unwrap().kind, kind, "catalog kind for {id}");
+        }
         assert!(
             navigation_items()
                 .iter()

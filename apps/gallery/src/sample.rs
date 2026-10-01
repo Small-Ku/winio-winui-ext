@@ -39,6 +39,19 @@ pub async fn create_sample(
         GallerySampleKind::Overview => Child::<samples::overview::OverviewSample>::init(init)
             .await?
             .into_boxed(),
+        GallerySampleKind::InfoBadge => Child::<samples::info_badge::InfoBadgeSample>::init(init)
+            .await?
+            .into_boxed(),
+        GallerySampleKind::RadioButtons => {
+            Child::<samples::radio_buttons::RadioButtonsSample>::init(init)
+                .await?
+                .into_boxed()
+        }
+        GallerySampleKind::SelectorBar => {
+            Child::<samples::selector_bar::SelectorBarSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::ToggleButton => {
             Child::<samples::toggle_button::ToggleButtonSample>::init(init)
                 .await?
