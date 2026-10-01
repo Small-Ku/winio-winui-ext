@@ -78,6 +78,7 @@ pub enum GallerySampleKind {
     MenuBar,
     NumberBox,
     PersonPicture,
+    PipsPager,
     PasswordBox,
     RatingControl,
     SplitButton,
@@ -250,6 +251,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         description: "Native TeachingTip popup lifecycle.",
     },
     GallerySampleDescriptor {
+        kind: GallerySampleKind::PipsPager,
+        id: "pips-pager",
+        title: "PipsPager",
+        section: Some(GallerySectionId::Collections),
+        keywords: &["pips", "pager", "page", "carousel", "navigation"],
+        description: "Native PipsPager with explicit navigation buttons and typed selection changes.",
+    },
+    GallerySampleDescriptor {
         kind: GallerySampleKind::FlipView,
         id: "flip-view",
         title: "FlipView",
@@ -407,6 +416,10 @@ mod tests {
         assert_eq!(
             by_id("content-dialog").unwrap().section,
             Some(GallerySectionId::DialogsFlyouts)
+        );
+        assert_eq!(
+            by_id("pips-pager").unwrap().section,
+            Some(GallerySectionId::Collections)
         );
         assert_eq!(
             by_id("flip-view").unwrap().section,

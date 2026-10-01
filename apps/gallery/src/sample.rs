@@ -104,6 +104,9 @@ pub async fn create_sample(
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::PipsPager => Child::<samples::pips_pager::PipsPagerSample>::init(init)
+            .await?
+            .into_boxed(),
         GallerySampleKind::RatingControl => {
             Child::<samples::rating_control::RatingControlSample>::init(init)
                 .await?

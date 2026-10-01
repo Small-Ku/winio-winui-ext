@@ -595,6 +595,29 @@ try {
     $info = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Text) 'Supplemental InfoBar canary') 'InfoBar canary message'
     $infoOutput = Wait-Text $window 'Open · informational status'
 
+    Select-NavigationSample $window 'Collections' 'PipsPager'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — PipsPager'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'PipsPager route did not keep one page-level ScrollViewer.' }
+    $pipsPager = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Menu),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.PipsPager'))) 'native PipsPager'
+    $pipsSelection = [System.Windows.Automation.SelectionPattern]$pipsPager.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
+    if ($pipsSelection.Current.GetSelection().Count -ne 1) { throw 'PipsPager did not expose a single selected pip before Next.' }
+    $pipsNext = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'NextPageButton')) 'PipsPager NextPageButton'
+    ([System.Windows.Automation.InvokePattern]$pipsNext.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample pips-pager: page:2'
+    $pipsOutput = Wait-Text $window 'page:2'
+    $pipsPager = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Menu),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.PipsPager'))) 'native PipsPager after Next'
+    $pipsSelection = [System.Windows.Automation.SelectionPattern]$pipsPager.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
+    if ($pipsSelection.Current.GetSelection().Count -ne 1) { throw 'PipsPager did not retain a single selected pip after Next.' }
+    $pipsPrevious = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'PreviousPageButton')) 'PipsPager PreviousPageButton'
+    ([System.Windows.Automation.InvokePattern]$pipsPrevious.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample pips-pager: page:1'
+    $pipsOutput = Wait-Text $window 'page:1'
     Select-NavigationSample $window 'Collections' 'FlipView'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — FlipView'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'FlipView route did not keep one page-level ScrollViewer.' }
@@ -940,7 +963,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBar; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBar; PipsPager Next/Previous stable selected-index events; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

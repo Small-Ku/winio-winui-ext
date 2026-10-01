@@ -21,6 +21,7 @@ mod controls {
     mod number_box;
     mod password_box;
     mod person_picture;
+    mod pips_pager;
     mod rating_control;
     mod split_button;
     mod teaching_tip;
@@ -59,6 +60,9 @@ mod controls {
     pub use number_box::{NumberBox, NumberBoxEvent, NumberBoxMessage, NumberBoxSpinPlacement};
     pub use password_box::{PasswordBox, PasswordBoxEvent, PasswordBoxMessage};
     pub use person_picture::{PersonPicture, PersonPictureMessage};
+    pub use pips_pager::{
+        PipsPager, PipsPagerButtonVisibility, PipsPagerEvent, PipsPagerMessage, PipsPagerWrapMode,
+    };
     pub use rating_control::{RatingControl, RatingControlEvent, RatingControlMessage};
     pub use split_button::{SplitButton, SplitButtonEvent, SplitButtonMessage};
     pub use teaching_tip::{
