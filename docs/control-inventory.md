@@ -41,7 +41,7 @@ The following examples are absent as public control structs from the compatible 
 - `CommandBar`
 - `MenuBar`
 - `CalendarDatePicker`, `DatePicker`, `TimePicker`, `ColorPicker`
-- `RatingControl`, `SplitButton`, `DropDownButton`
+- `ProgressRing`, `RatingControl`, `SplitButton`, `DropDownButton`
 
 This list demonstrates supplemental projection availability; it is not a wrapper roadmap promise. The broad generator also follows required dependencies outside the root namespace where bindgen proves they are needed. It does not generate the entire Microsoft metadata universe.
 
@@ -67,6 +67,7 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 | `NumberBox` | supplemental | Value/range/small-change/spin placement; typed `ValueChanged`; UIA RangeValue sets `42`. |
 | `PersonPicture` | supplemental | Display name, initials, badge number/text/glyph, group state and small-image preference. Gallery composes its visible output from native property getters after setting `Ada Lovelace`, `AL` and badge `3`. |
 | `PipsPager` | supplemental | Page count/current index, max visible pips, previous/next button visibility and wrap mode with typed selected-index changes. Gallery UIA invokes native `NextPageButton` and `PreviousPageButton` and observes `page:1 → page:2 → page:1`. |
+| `ProgressRing` | supplemental | Active/indeterminate state and determinate minimum/maximum/value. Gallery UIA verifies native RangeValue `65`, toggles the live Indeterminate option on and back off, and observes the sample output change. |
 | `RatingControl` | supplemental | Value, max rating, read-only/clear settings, caption and typed value-change events; Gallery UIA verifies native RangeValue 3→4 with max 5. |
 | `SplitButton` | supplemental | Native primary `Click` event plus explicit flyout container; Winio children are created under the flyout Canvas, with flyout open/close events and UIA invoke/expand-collapse coverage. |
 | `TimePicker` | supplemental | Uses `std::time::Duration` for time-of-day values, exposes header/clock/minute-increment APIs and typed old/new time events. Gallery UIA opens the native picker, selects hour 11 and minute 45, accepts, and observes `10:30 → 11:45`. |

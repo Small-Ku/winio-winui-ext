@@ -22,6 +22,7 @@ mod controls {
     mod password_box;
     mod person_picture;
     mod pips_pager;
+    mod progress_ring;
     mod rating_control;
     mod split_button;
     mod teaching_tip;
@@ -63,6 +64,7 @@ mod controls {
     pub use pips_pager::{
         PipsPager, PipsPagerButtonVisibility, PipsPagerEvent, PipsPagerMessage, PipsPagerWrapMode,
     };
+    pub use progress_ring::{ProgressRing, ProgressRingMessage};
     pub use rating_control::{RatingControl, RatingControlEvent, RatingControlMessage};
     pub use split_button::{SplitButton, SplitButtonEvent, SplitButtonMessage};
     pub use teaching_tip::{

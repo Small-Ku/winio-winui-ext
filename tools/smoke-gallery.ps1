@@ -586,6 +586,24 @@ try {
         throw 'Narrow ToggleButton cards, Output, or Options regions overlap instead of stacking.'
     }
 
+    Select-NavigationSample $window 'Status and info' 'ProgressRing'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ProgressRing'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'ProgressRing route did not keep one page-level ScrollViewer.' }
+    $progressRing = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::ProgressBar),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.ProgressRing'))) 'native ProgressRing'
+    $progressRange = [System.Windows.Automation.RangeValuePattern]$progressRing.GetCurrentPattern([System.Windows.Automation.RangeValuePattern]::Pattern)
+    if ([Math]::Abs($progressRange.Current.Value - 65.0) -gt 0.001) { throw "ProgressRing RangeValue was not 65: $($progressRange.Current.Value)." }
+    $progressToggle = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Indeterminate'))) 'ProgressRing indeterminate option'
+    $progressTogglePattern = [System.Windows.Automation.TogglePattern]$progressToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    $progressTogglePattern.Toggle()
+    $progressOutput = Wait-Text $window 'indeterminate'
+    if ($progressTogglePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::On) { throw 'ProgressRing indeterminate option did not toggle on.' }
+    $progressTogglePattern.Toggle()
+    $progressOutput = Wait-Text $window 'value:65 · determinate'
+    if ($progressTogglePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'ProgressRing indeterminate option did not toggle off.' }
     Select-NavigationSample $window 'Status and info' 'PersonPicture'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — PersonPicture'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'PersonPicture route did not keep one page-level ScrollViewer.' }
@@ -963,7 +981,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBar; PipsPager Next/Previous stable selected-index events; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ProgressRing RangeValue 65 + indeterminate option round-trip; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBar; PipsPager Next/Previous stable selected-index events; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

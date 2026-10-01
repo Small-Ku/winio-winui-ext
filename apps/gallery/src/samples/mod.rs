@@ -13,6 +13,7 @@ pub mod overview;
 pub mod password_box;
 pub mod person_picture;
 pub mod pips_pager;
+pub mod progress_ring;
 pub mod rating_control;
 pub mod split_button;
 pub mod teaching_tip;
