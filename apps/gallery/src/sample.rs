@@ -64,6 +64,11 @@ pub async fn create_sample(
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::DatePicker => {
+            Child::<samples::date_picker::DatePickerSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::DropDownButton => {
             Child::<samples::drop_down_button::DropDownButtonSample>::init(init)
                 .await?

@@ -9,6 +9,7 @@ mod controls {
     mod color_picker;
     mod command_bar;
     mod content_dialog;
+    mod date_picker;
     mod drop_down_button;
     mod expander;
     mod flip_view;
@@ -37,6 +38,7 @@ mod controls {
         ContentDialog, ContentDialogCloseResult, ContentDialogDefaultButton, ContentDialogEvent,
         ContentDialogMessage,
     };
+    pub use date_picker::{Date, DatePicker, DatePickerEvent, DatePickerMessage, Month};
     pub use drop_down_button::{DropDownButton, DropDownButtonEvent, DropDownButtonMessage};
     pub use expander::{Expander, ExpanderEvent, ExpanderMessage};
     pub use flip_view::{FlipView, FlipViewEvent, FlipViewMessage, FlipViewPage};

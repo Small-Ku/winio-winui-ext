@@ -67,6 +67,7 @@ pub enum GallerySampleKind {
     CommandBar,
     ColorPicker,
     ContentDialog,
+    DatePicker,
     DropDownButton,
     ToggleButton,
     ToggleSwitch,
@@ -118,6 +119,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["toggle", "switch", "boolean", "state"],
         description: "Native ToggleSwitch with typed on/off events.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::DatePicker,
+        id: "date-picker",
+        title: "DatePicker",
+        section: Some(GallerySectionId::BasicInput),
+        keywords: &["date", "picker", "calendar", "day", "month", "year"],
+        description: "Native DatePicker using time::Date calendar-day values.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::DropDownButton,
@@ -328,6 +337,10 @@ mod tests {
         );
         assert_eq!(
             by_id("toggle-switch").unwrap().section,
+            Some(GallerySectionId::BasicInput)
+        );
+        assert_eq!(
+            by_id("date-picker").unwrap().section,
             Some(GallerySectionId::BasicInput)
         );
         assert_eq!(
