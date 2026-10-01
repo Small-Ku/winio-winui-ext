@@ -108,6 +108,9 @@ pub async fn create_sample(
         GallerySampleKind::FlipView => Child::<samples::flip_view::FlipViewSample>::init(init)
             .await?
             .into_boxed(),
+        GallerySampleKind::GridView => Child::<samples::grid_view::GridViewSample>::init(init)
+            .await?
+            .into_boxed(),
         GallerySampleKind::InfoBar => Child::<samples::info_bar::InfoBarSample>::init(init)
             .await?
             .into_boxed(),

@@ -7,6 +7,7 @@ pub mod date_picker;
 pub mod drop_down_button;
 pub mod expander;
 pub mod flip_view;
+pub mod grid_view;
 pub mod info_badge;
 pub mod info_bar;
 pub mod menu_bar;

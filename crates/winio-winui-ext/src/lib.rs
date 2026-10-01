@@ -17,6 +17,7 @@ mod controls {
     mod drop_down_button;
     mod expander;
     mod flip_view;
+    mod grid_view;
     mod info_badge;
     mod info_bar;
     mod integrated_title_bar;
@@ -63,6 +64,7 @@ mod controls {
     pub use drop_down_button::{DropDownButton, DropDownButtonEvent, DropDownButtonMessage};
     pub use expander::{Expander, ExpanderEvent, ExpanderMessage};
     pub use flip_view::{FlipView, FlipViewEvent, FlipViewMessage, FlipViewPage};
+    pub use grid_view::{GridView, GridViewEvent, GridViewItemDescriptor, GridViewMessage};
     pub use info_badge::{InfoBadge, InfoBadgeMessage};
     pub use info_bar::{InfoBar, InfoBarMessage};
     pub use integrated_title_bar::{

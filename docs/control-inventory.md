@@ -88,6 +88,7 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 | `ToggleSwitch` | supplemental | Native `IsOn`/`SetIsOn`, header text, typed `Toggled(bool)` events, and UIA TogglePattern round-trip in the Gallery. |
 | `TeachingTip` | supplemental | Targets an existing Winio widget; native popup close button emits typed `CloseButton` reason through `ComponentSender`. |
 | `TreeView` | supplemental | Recursive stable node descriptors; native `Expanding` and `ItemInvoked`; UIA expands root (`root`) and invokes leaf (`leaf`). |
+| `GridView` | supplemental | Stable-ID tile descriptors are materialized as wrapper-owned native `GridViewItem` UIElements and supplied through the reusable non-agile `IBindableIterable`; stable-ID selection, replacement preservation, and UIA `SelectionItemPattern` are exercised in Gallery smoke. |
 
 ### Candidates from the bounded control sweep
 
@@ -109,13 +110,23 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 | `TableView` | Deferred: collection/virtualization ABI | It combines virtualized rows, stable row selection, editable cells, sorting, grouping, and columns, which requires the bindable collection/item realization contract excluded from this pass. |
 | `WrapPanel` | Deferred: projection boundary | It appears in current Gallery metadata but is absent from the checked-in supplemental Rust projection. No one-off bindgen filter is added for this layout type. |
 
+### ItemsSource unlock sweep
+
+| Control | Classification | Reason |
+| --- | --- | --- |
+| `GridView` | Implemented | Winio has no high-level tile selector. Its descriptor-backed wrapper owns `GridViewItem` UIElements, places stable IDs in `Tag` and descriptor-derived `AutomationId`, and exposes single selection plus typed events. The Gallery smoke proves native item realization and selection through UIA. |
+| `ItemsView` | Deferred: element factory contract | The projected control exposes `ItemTemplate` as `IElementFactory`, along with layout, selection, current-item, and invocation APIs. `IBindableIterable` only supplies items; it cannot satisfy the factory contract or prove the control's meaningful selection/layout behavior, so an ItemsSource-only wrapper would be incomplete. |
+| `ItemsRepeater` | Deferred: element factory and virtualization contract | `IBindableIterable` supplies data but does not supply the `IElementFactory`/`ElementFactory` lifecycle or a layout/template strategy. A repeater wrapper that only sets data cannot create, recycle, or verify realized elements correctly. |
+| `ListView` | Already covered by Winio | Winio 0.12 `ListBox` already provides the high-level string list, single/multiple selection, mutation, and selection event scenario. This sweep found no bounded native ListView capability gap that justifies duplicating that API. |
+| `SemanticZoom` | Deferred: composed semantic-zoom views | The control requires owned zoomed-in and zoomed-out child views implementing `ISemanticZoomInformation`, which GridView alone does not provide as a pair, plus zoom transition and UIA behavior. A bounded composition API and runtime proof remain absent. |
+
 These classifications were checked against locked Winio 0.12 / `winio-winui3 0.4.4`, the current local supplemental projection, and the current official Gallery control metadata. Current metadata reference: [ControlInfoData.json](https://github.com/microsoft/WinUI-Gallery/blob/main/WinUIGallery/SampleSupport/Data/ControlInfoData.json).
 
 ### Previously deferred controls
 
 `SwipeControl` remains deferred for this batch. Its action items are exposed through four native directional `SwipeItems` collections, and `SwipeItem.Invoked` requires per-item event-token ownership. The current Gallery smoke harness has no pointer-gesture driver to reveal the native actions before invoking them, so it cannot provide the required real-runtime invocation evidence without adding a new synthetic-input path.
 
-`BreadcrumbBar` remains unwrapped in this batch: its `ItemsSource` requires a XAML-bindable collection. The safe generic read-only vector view available in the workspace does not realize native item peers, and supplying the required bindable collection would expand this pass into a custom ABI collection implementation.
+`BreadcrumbBar` now uses the reusable non-agile `IBindableIterable` adapter in `src/bindable.rs`; its Gallery smoke verifies native item realization and stable-ID invocation. `GridView` demonstrates the same primitive with wrapper-owned UIElement-backed item objects. This unlocks controls whose native item objects can be explicitly owned and tested; it does not itself implement data-template selection, element recycling, virtualization layout, or composed semantic-zoom view contracts. Those remaining requirements are recorded per candidate above.
 
 The wrapper layer remains intentionally selective even though the supplemental projection is broad. New wrappers should be driven by downstream API/lifecycle needs and should add their required-method contract plus a native runtime smoke path where practical. They should not require adding another per-control bindgen filter.
 
