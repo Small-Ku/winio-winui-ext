@@ -34,6 +34,7 @@ mod controls {
     mod toggle_button;
     mod toggle_switch;
     mod tree_view;
+    mod two_pane_view;
 
     pub use auto_suggest_box::{
         AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxItemDescriptor, AutoSuggestBoxMessage,
@@ -87,6 +88,10 @@ mod controls {
     pub use toggle_button::{ToggleButton, ToggleButtonEvent, ToggleButtonMessage};
     pub use toggle_switch::{ToggleSwitch, ToggleSwitchEvent, ToggleSwitchMessage};
     pub use tree_view::{TreeView, TreeViewEvent, TreeViewMessage, TreeViewNodeDescriptor};
+    pub use two_pane_view::{
+        TwoPaneView, TwoPaneViewMessage, TwoPaneViewMode, TwoPaneViewPriority,
+        TwoPaneViewTallModeConfiguration, TwoPaneViewWideModeConfiguration,
+    };
 }
 
 pub use controls::*;

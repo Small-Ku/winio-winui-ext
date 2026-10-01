@@ -90,6 +90,7 @@ pub enum GallerySampleKind {
     TeachingTip,
     TimePicker,
     TreeView,
+    TwoPaneView,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -166,6 +167,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::Layout),
         keywords: &["expander", "expand", "collapse", "layout", "content"],
         description: "Native Expander hosting Winio-owned nested content.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::TwoPaneView,
+        id: "two-pane-view",
+        title: "TwoPaneView",
+        section: Some(GallerySectionId::Layout),
+        keywords: &["layout", "panes", "adaptive", "split"],
+        description: "Adaptive two-pane layout with wrapper-owned Winio pane containers.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::PersonPicture,
@@ -419,6 +428,10 @@ mod tests {
             Some(GallerySectionId::Layout)
         );
         assert_eq!(
+            by_id("two-pane-view").unwrap().section,
+            Some(GallerySectionId::Layout)
+        );
+        assert_eq!(
             by_id("rating-control").unwrap().section,
             Some(GallerySectionId::BasicInput)
         );
@@ -497,6 +510,7 @@ mod tests {
         for (id, kind) in [
             ("info-badge", GallerySampleKind::InfoBadge),
             ("progress-bar", GallerySampleKind::ProgressBar),
+            ("two-pane-view", GallerySampleKind::TwoPaneView),
             ("progress-bar", GallerySampleKind::ProgressBar),
             ("radio-buttons", GallerySampleKind::RadioButtons),
             ("selector-bar", GallerySampleKind::SelectorBar),

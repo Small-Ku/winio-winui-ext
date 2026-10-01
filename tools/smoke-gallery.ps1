@@ -625,6 +625,18 @@ try {
     $progressBarTogglePattern.Toggle()
     $null = Wait-Text $window 'value:65 · determinate'
     if ($progressBarTogglePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'ProgressBar indeterminate option did not toggle off.' }
+    Select-NavigationSample $window 'Layout' 'TwoPaneView'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — TwoPaneView'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'TwoPaneView route did not keep one page-level ScrollViewer.' }
+    $twoPane = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.TwoPaneView')) 'native TwoPaneView'
+    $pauseProgress = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Pause progress') 'Winio child in TwoPaneView pane 2'
+    $pausePattern = [System.Windows.Automation.TogglePattern]$pauseProgress.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    $pausePattern.Toggle()
+    $null = Wait-Text $window 'wide · paused'
+    if ($pausePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::On) { throw 'TwoPaneView child did not toggle progress to paused.' }
+    $pausePattern.Toggle()
+    $null = Wait-Text $window 'wide · unpaused'
+    if ($pausePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'TwoPaneView child did not toggle progress back to unpaused.' }
     Select-NavigationSample $window 'Status and info' 'PersonPicture'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — PersonPicture'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'PersonPicture route did not keep one page-level ScrollViewer.' }

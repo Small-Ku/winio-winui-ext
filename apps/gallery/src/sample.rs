@@ -153,5 +153,10 @@ pub async fn create_sample(
         GallerySampleKind::TreeView => Child::<samples::tree_view::TreeViewSample>::init(init)
             .await?
             .into_boxed(),
+        GallerySampleKind::TwoPaneView => {
+            Child::<samples::two_pane_view::TwoPaneViewSample>::init(init)
+                .await?
+                .into_boxed()
+        }
     })
 }
