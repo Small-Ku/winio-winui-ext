@@ -120,6 +120,11 @@ pub async fn create_sample(
         GallerySampleKind::PipsPager => Child::<samples::pips_pager::PipsPagerSample>::init(init)
             .await?
             .into_boxed(),
+        GallerySampleKind::ProgressBar => {
+            Child::<samples::progress_bar::ProgressBarSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::ProgressRing => {
             Child::<samples::progress_ring::ProgressRingSample>::init(init)
                 .await?

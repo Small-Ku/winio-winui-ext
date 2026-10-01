@@ -14,6 +14,7 @@ pub mod overview;
 pub mod password_box;
 pub mod person_picture;
 pub mod pips_pager;
+pub mod progress_bar;
 pub mod progress_ring;
 pub mod radio_buttons;
 pub mod rating_control;

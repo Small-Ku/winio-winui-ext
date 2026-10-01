@@ -609,6 +609,22 @@ try {
     $progressTogglePattern.Toggle()
     $progressOutput = Wait-Text $window 'value:65 · determinate'
     if ($progressTogglePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'ProgressRing indeterminate option did not toggle off.' }
+    Select-NavigationSample $window 'Status and info' 'ProgressBar'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ProgressBar'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'ProgressBar route did not keep one page-level ScrollViewer.' }
+    $progressBar = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::ProgressBar),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.ProgressBar'))) 'native ProgressBar'
+    $progressBarRange = [System.Windows.Automation.RangeValuePattern]$progressBar.GetCurrentPattern([System.Windows.Automation.RangeValuePattern]::Pattern)
+    if ([Math]::Abs($progressBarRange.Current.Value - 65.0) -gt 0.001) { throw "ProgressBar RangeValue was not 65: $($progressBarRange.Current.Value)." }
+    $progressBarToggle = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Indeterminate') 'ProgressBar indeterminate option'
+    $progressBarTogglePattern = [System.Windows.Automation.TogglePattern]$progressBarToggle.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    $progressBarTogglePattern.Toggle()
+    $null = Wait-Text $window 'indeterminate'
+    if ($progressBarTogglePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::On) { throw 'ProgressBar indeterminate option did not toggle on.' }
+    $progressBarTogglePattern.Toggle()
+    $null = Wait-Text $window 'value:65 · determinate'
+    if ($progressBarTogglePattern.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::Off) { throw 'ProgressBar indeterminate option did not toggle off.' }
     Select-NavigationSample $window 'Status and info' 'PersonPicture'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — PersonPicture'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'PersonPicture route did not keep one page-level ScrollViewer.' }

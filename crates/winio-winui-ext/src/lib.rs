@@ -23,6 +23,7 @@ mod controls {
     mod password_box;
     mod person_picture;
     mod pips_pager;
+    mod progress_bar;
     mod progress_ring;
     mod radio_buttons;
     mod rating_control;
@@ -68,6 +69,7 @@ mod controls {
     pub use pips_pager::{
         PipsPager, PipsPagerButtonVisibility, PipsPagerEvent, PipsPagerMessage, PipsPagerWrapMode,
     };
+    pub use progress_bar::{ProgressBar, ProgressBarMessage};
     pub use progress_ring::{ProgressRing, ProgressRingMessage};
     pub use radio_buttons::{
         RadioButtonOption, RadioButtons, RadioButtonsEvent, RadioButtonsMessage,

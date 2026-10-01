@@ -80,6 +80,7 @@ pub enum GallerySampleKind {
     NumberBox,
     PersonPicture,
     PipsPager,
+    ProgressBar,
     ProgressRing,
     PasswordBox,
     RatingControl,
@@ -205,6 +206,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["password", "secure", "input", "reveal"],
         description: "Native PasswordBox with safe typed change notification.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::ProgressBar,
+        id: "progress-bar",
+        title: "ProgressBar",
+        section: Some(GallerySectionId::StatusInfo),
+        keywords: &["progress", "loading", "range"],
+        description: "Native ProgressBar with determinate and indeterminate state.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ProgressRing,
@@ -422,6 +431,10 @@ mod tests {
             Some(GallerySectionId::BasicInput)
         );
         assert_eq!(
+            by_id("progress-bar").unwrap().section,
+            Some(GallerySectionId::StatusInfo)
+        );
+        assert_eq!(
             by_id("progress-ring").unwrap().section,
             Some(GallerySectionId::StatusInfo)
         );
@@ -483,6 +496,8 @@ mod tests {
         );
         for (id, kind) in [
             ("info-badge", GallerySampleKind::InfoBadge),
+            ("progress-bar", GallerySampleKind::ProgressBar),
+            ("progress-bar", GallerySampleKind::ProgressBar),
             ("radio-buttons", GallerySampleKind::RadioButtons),
             ("selector-bar", GallerySampleKind::SelectorBar),
         ] {
