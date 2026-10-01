@@ -71,6 +71,7 @@ pub enum GallerySampleKind {
     ToggleButton,
     ToggleSwitch,
     Expander,
+    FlipView,
     InfoBar,
     MenuBar,
     NumberBox,
@@ -222,6 +223,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         description: "Native TeachingTip popup lifecycle.",
     },
     GallerySampleDescriptor {
+        kind: GallerySampleKind::FlipView,
+        id: "flip-view",
+        title: "FlipView",
+        section: Some(GallerySectionId::Collections),
+        keywords: &["flip", "view", "pager", "carousel", "selection"],
+        description: "Native FlipView with descriptor-backed pages and typed selection changes.",
+    },
+    GallerySampleDescriptor {
         kind: GallerySampleKind::TreeView,
         id: "tree-view",
         title: "TreeView",
@@ -359,6 +368,10 @@ mod tests {
         assert_eq!(
             by_id("content-dialog").unwrap().section,
             Some(GallerySectionId::DialogsFlyouts)
+        );
+        assert_eq!(
+            by_id("flip-view").unwrap().section,
+            Some(GallerySectionId::Collections)
         );
         assert_eq!(
             by_id("tree-view").unwrap().section,

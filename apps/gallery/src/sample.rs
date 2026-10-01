@@ -72,6 +72,9 @@ pub async fn create_sample(
         GallerySampleKind::Expander => Child::<samples::expander::ExpanderSample>::init(init)
             .await?
             .into_boxed(),
+        GallerySampleKind::FlipView => Child::<samples::flip_view::FlipViewSample>::init(init)
+            .await?
+            .into_boxed(),
         GallerySampleKind::InfoBar => Child::<samples::info_bar::InfoBarSample>::init(init)
             .await?
             .into_boxed(),

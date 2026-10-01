@@ -24,7 +24,12 @@ function TypeCondition($Type) {
     return [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, $Type)
 }
 function Find-MainWindow($ProcessCondition) {
-    $windows = $root.FindAll($children, $ProcessCondition)
+    try {
+        $windows = $root.FindAll($children, $ProcessCondition)
+    } catch {
+        # UI Automation can transiently time out while WinUI rebuilds its peer tree.
+        return $null
+    }
     for ($i = 0; $i -lt $windows.Count; $i++) {
         $candidate = $windows.Item($i)
         if ($candidate.Current.Name -like 'Winio WinUI Extensions*') { return $candidate }
@@ -175,28 +180,44 @@ function Assert-SourceViewerContract($SourceViewer, [string]$Marker) {
     }
 
 
-}function Select-NavigationSample($Window, [string]$Section, [string]$Sample) {
-    $sectionElement = Wait-Element $Window (Condition ([System.Windows.Automation.ControlType]::ListItem) $Section) "NavigationView section '$Section'"
+}
+
+function Select-NavigationSample($Window, [string]$Section, [string]$Sample) {
+    $sectionCondition = Condition ([System.Windows.Automation.ControlType]::ListItem) $Section
+    $sectionElement = Wait-Element $Window $sectionCondition "NavigationView section '$Section'"
+
+    # In compact/closed NavigationView mode only the section glyph is realized.
+    # Open the pane before asking UIA for one of that section's child items.
+    if ($sectionElement.Current.BoundingRectangle.Width -lt 120) {
+        $paneToggle = Wait-Element $Window ([System.Windows.Automation.PropertyCondition]::new(
+            $automation::AutomationIdProperty, 'PART_PaneToggleButton')) 'TitleBar pane toggle for navigation'
+        ([System.Windows.Automation.InvokePattern]$paneToggle.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+        Start-Sleep -Milliseconds 250
+        $sectionElement = Wait-Element $Window $sectionCondition "expanded NavigationView section '$Section'"
+    }
+
     try {
         ([System.Windows.Automation.ScrollItemPattern]$sectionElement.GetCurrentPattern([System.Windows.Automation.ScrollItemPattern]::Pattern)).ScrollIntoView()
     } catch {}
+
     $expand = [System.Windows.Automation.ExpandCollapsePattern]$sectionElement.GetCurrentPattern([System.Windows.Automation.ExpandCollapsePattern]::Pattern)
     if ($expand.Current.ExpandCollapseState -eq [System.Windows.Automation.ExpandCollapseState]::Collapsed) {
         $expand.Expand()
-        Start-Sleep -Milliseconds 100
+        Start-Sleep -Milliseconds 120
     }
+
     $condition = Condition ([System.Windows.Automation.ControlType]::ListItem) $Sample
     $item = $Window.FindFirst($descendants, $condition)
     if ($null -eq $item) {
-        # A long NavigationView pane virtualizes child peers just outside the viewport.
-        # Re-anchor the section and reopen it so the requested child is realized.
+        # Re-anchor and reopen the group once for virtualized peers near the
+        # bottom of a long navigation pane.
         $expand.Collapse()
         Start-Sleep -Milliseconds 50
         try {
             ([System.Windows.Automation.ScrollItemPattern]$sectionElement.GetCurrentPattern([System.Windows.Automation.ScrollItemPattern]::Pattern)).ScrollIntoView()
         } catch {}
         $expand.Expand()
-        Start-Sleep -Milliseconds 150
+        Start-Sleep -Milliseconds 180
         $item = Wait-Element $Window $condition "NavigationView sample '$Sample'"
     }
     ([System.Windows.Automation.SelectionItemPattern]$item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
@@ -574,6 +595,28 @@ try {
     $info = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Text) 'Supplemental InfoBar canary') 'InfoBar canary message'
     $infoOutput = Wait-Text $window 'Open · informational status'
 
+    Select-NavigationSample $window 'Collections' 'FlipView'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — FlipView'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'FlipView route did not keep one page-level ScrollViewer.' }
+    $flip = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::ClassNameProperty, 'FlipView')) 'native FlipView'
+    $flipSelection = [System.Windows.Automation.SelectionPattern]$flip.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
+    $flipSelected = $flipSelection.Current.GetSelection()
+    if ($flipSelected.Count -ne 1 -or $flipSelected[0].Current.Name -ne 'First page') { throw 'FlipView did not start on First page.' }
+    $flipItems = [System.Windows.Automation.ItemContainerPattern]$flip.GetCurrentPattern([System.Windows.Automation.ItemContainerPattern]::Pattern)
+    $secondPage = $flipItems.FindItemByProperty($null, $automation::NameProperty, 'Second page')
+    if ($null -eq $secondPage) { throw 'FlipView ItemContainerPattern did not find Second page.' }
+    try {
+        ([System.Windows.Automation.VirtualizedItemPattern]$secondPage.GetCurrentPattern([System.Windows.Automation.VirtualizedItemPattern]::Pattern)).Realize()
+    } catch {}
+    ([System.Windows.Automation.SelectionItemPattern]$secondPage.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample flip-view: page:second'
+    $flipOutput = Wait-Text $window 'page:second'
+    $flip = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::ClassNameProperty, 'FlipView')) 'native FlipView after selection'
+    $flipSelection = [System.Windows.Automation.SelectionPattern]$flip.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
+    $flipSelected = $flipSelection.Current.GetSelection()
+    if ($flipSelected.Count -ne 1 -or $flipSelected[0].Current.Name -ne 'Second page') { throw 'FlipView selection did not round-trip to Second page.' }
     Select-NavigationSample $window 'Collections' 'TreeView'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — TreeView'
     $treeItemCondition = [System.Windows.Automation.AndCondition]::new(
@@ -820,7 +863,7 @@ try {
     } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $tipAfter) { throw 'TeachingTip popup remained after CloseButton invoke.' }
 
-    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBar; TreeView; native TeachingTip popup lifecycle."
+    Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBar; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

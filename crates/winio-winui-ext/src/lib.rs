@@ -11,6 +11,7 @@ mod controls {
     mod content_dialog;
     mod drop_down_button;
     mod expander;
+    mod flip_view;
     mod info_bar;
     mod integrated_title_bar;
     mod menu_bar;
@@ -37,6 +38,7 @@ mod controls {
     };
     pub use drop_down_button::{DropDownButton, DropDownButtonEvent, DropDownButtonMessage};
     pub use expander::{Expander, ExpanderEvent, ExpanderMessage};
+    pub use flip_view::{FlipView, FlipViewEvent, FlipViewMessage, FlipViewPage};
     pub use info_bar::{InfoBar, InfoBarMessage};
     pub use integrated_title_bar::{
         IntegratedTitleBar, IntegratedTitleBarEvent, IntegratedTitleBarInit,
