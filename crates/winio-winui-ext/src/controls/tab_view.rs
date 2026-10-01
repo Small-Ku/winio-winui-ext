@@ -99,7 +99,7 @@ impl TabView {
     }
 
     pub fn selected_index(&self) -> Result<i32> {
-        self.native.SelectedIndex().map_err(Into::into)
+        self.native.SelectedIndex()
     }
 
     /// Selects a tab by index. `-1` clears selection; any other index must exist.

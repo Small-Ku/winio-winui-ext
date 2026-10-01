@@ -175,14 +175,14 @@ impl TwoPaneView {
         Ok(())
     }
     pub fn min_wide_mode_width(&self) -> Result<f64> {
-        Ok(self.native.MinWideModeWidth()?)
+        self.native.MinWideModeWidth()
     }
     pub fn set_min_wide_mode_width(&mut self, value: f64) -> Result<()> {
         self.native.SetMinWideModeWidth(value)?;
         Ok(())
     }
     pub fn min_tall_mode_height(&self) -> Result<f64> {
-        Ok(self.native.MinTallModeHeight()?)
+        self.native.MinTallModeHeight()
     }
     pub fn set_min_tall_mode_height(&mut self, value: f64) -> Result<()> {
         self.native.SetMinTallModeHeight(value)?;

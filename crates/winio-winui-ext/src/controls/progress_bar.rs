@@ -20,42 +20,42 @@ impl Failable for ProgressBar {
 
 impl ProgressBar {
     pub fn is_indeterminate(&self) -> Result<bool> {
-        Ok(self.native.IsIndeterminate()?)
+        self.native.IsIndeterminate()
     }
     pub fn set_is_indeterminate(&mut self, value: bool) -> Result<()> {
         self.native.SetIsIndeterminate(value)?;
         Ok(())
     }
     pub fn minimum(&self) -> Result<f64> {
-        Ok(self.native.Minimum()?)
+        self.native.Minimum()
     }
     pub fn set_minimum(&mut self, value: f64) -> Result<()> {
         self.native.SetMinimum(value)?;
         Ok(())
     }
     pub fn maximum(&self) -> Result<f64> {
-        Ok(self.native.Maximum()?)
+        self.native.Maximum()
     }
     pub fn set_maximum(&mut self, value: f64) -> Result<()> {
         self.native.SetMaximum(value)?;
         Ok(())
     }
     pub fn value(&self) -> Result<f64> {
-        Ok(self.native.Value()?)
+        self.native.Value()
     }
     pub fn set_value(&mut self, value: f64) -> Result<()> {
         self.native.SetValue(value)?;
         Ok(())
     }
     pub fn show_error(&self) -> Result<bool> {
-        Ok(self.native.ShowError()?)
+        self.native.ShowError()
     }
     pub fn set_show_error(&mut self, value: bool) -> Result<()> {
         self.native.SetShowError(value)?;
         Ok(())
     }
     pub fn show_paused(&self) -> Result<bool> {
-        Ok(self.native.ShowPaused()?)
+        self.native.ShowPaused()
     }
     pub fn set_show_paused(&mut self, value: bool) -> Result<()> {
         self.native.SetShowPaused(value)?;
