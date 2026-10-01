@@ -5,6 +5,7 @@ use winio_winui_ext::{
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum GallerySectionId {
     BasicInput,
+    MenusToolbars,
     StatusInfo,
     Text,
     DialogsFlyouts,
@@ -13,8 +14,9 @@ pub enum GallerySectionId {
 }
 
 impl GallerySectionId {
-    pub const ALL: [Self; 6] = [
+    pub const ALL: [Self; 7] = [
         Self::BasicInput,
+        Self::MenusToolbars,
         Self::StatusInfo,
         Self::Text,
         Self::DialogsFlyouts,
@@ -25,6 +27,7 @@ impl GallerySectionId {
     pub const fn id(self) -> &'static str {
         match self {
             Self::BasicInput => "basic-input",
+            Self::MenusToolbars => "menus-toolbars",
             Self::StatusInfo => "status-info",
             Self::Text => "text",
             Self::DialogsFlyouts => "dialogs-flyouts",
@@ -36,6 +39,7 @@ impl GallerySectionId {
     pub const fn title(self) -> &'static str {
         match self {
             Self::BasicInput => "Basic input",
+            Self::MenusToolbars => "Menus and toolbars",
             Self::StatusInfo => "Status and info",
             Self::Text => "Text",
             Self::DialogsFlyouts => "Dialogs and flyouts",
@@ -47,6 +51,7 @@ impl GallerySectionId {
     pub const fn icon(self) -> NavigationViewItemIcon {
         match self {
             Self::BasicInput => NavigationViewItemIcon::Edit,
+            Self::MenusToolbars => NavigationViewItemIcon::List,
             Self::StatusInfo => NavigationViewItemIcon::Info,
             Self::Text => NavigationViewItemIcon::Document,
             Self::DialogsFlyouts => NavigationViewItemIcon::Comment,
@@ -59,6 +64,7 @@ impl GallerySectionId {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum GallerySampleKind {
     Overview,
+    CommandBar,
     ContentDialog,
     DropDownButton,
     ToggleButton,
@@ -154,6 +160,14 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         section: Some(GallerySectionId::BasicInput),
         keywords: &["split", "button", "flyout", "action"],
         description: "Native SplitButton with owned flyout content.",
+    },
+    GallerySampleDescriptor {
+        kind: GallerySampleKind::CommandBar,
+        id: "command-bar",
+        title: "CommandBar",
+        section: Some(GallerySectionId::MenusToolbars),
+        keywords: &["command", "bar", "toolbar", "overflow", "action"],
+        description: "Native CommandBar with stable primary and overflow actions.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ContentDialog,
@@ -281,6 +295,10 @@ mod tests {
         assert_eq!(
             by_id("info-bar").unwrap().section,
             Some(GallerySectionId::StatusInfo)
+        );
+        assert_eq!(
+            by_id("command-bar").unwrap().section,
+            Some(GallerySectionId::MenusToolbars)
         );
         assert_eq!(
             by_id("teaching-tip").unwrap().section,

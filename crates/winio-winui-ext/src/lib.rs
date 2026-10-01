@@ -6,6 +6,7 @@ mod native;
 
 mod controls {
     mod auto_suggest_box;
+    mod command_bar;
     mod content_dialog;
     mod drop_down_button;
     mod expander;
@@ -24,6 +25,7 @@ mod controls {
         AutoSuggestBox, AutoSuggestBoxEvent, AutoSuggestBoxItemDescriptor, AutoSuggestBoxMessage,
         AutoSuggestBoxTextChangeReason,
     };
+    pub use command_bar::{CommandBar, CommandBarAction, CommandBarEvent, CommandBarMessage};
     pub use content_dialog::{
         ContentDialog, ContentDialogCloseResult, ContentDialogDefaultButton, ContentDialogEvent,
         ContentDialogMessage,
