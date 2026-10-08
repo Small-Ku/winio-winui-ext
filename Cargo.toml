@@ -78,3 +78,6 @@ windows-future = "0.3"
 windows-numerics = "0.3"
 winio-winui-bindings = { path = "crates/winio-winui-bindings" }
 overrides-windows-bindgen = { version = "=0.66.0", package = "overrides-windows-bindgen" }
+
+[profile.dev.package."*"]
+opt-level = 3

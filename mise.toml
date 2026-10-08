@@ -5,8 +5,14 @@ min_version = "2026.9.15"
 lockfile = true
 lockfile_platforms = ["windows-x64"]
 
+[settings.task]
+run_auto_install = false
+
 [tools]
-rust = { version = "stable", components = ["clippy", "rustfmt"], profile = "minimal", mr_boxington = true }
+rust = [
+  { version = "stable", components = ["clippy", "rustfmt"], profile = "minimal", mr_boxington = true },
+  { version = "nightly", components = ["rustc-codegen-cranelift-preview"], profile = "minimal", mr_boxington = true },
+]
 mr-boxington = "latest"
 
 [env]
@@ -31,7 +37,8 @@ run = "mbx check --locked --workspace --all-targets"
 
 [tasks.build]
 description = "Build all workspace targets through Mr Boxington"
-run = "mbx build --locked --workspace --all-targets"
+tools = { rust = { version = "nightly", components = ["rustc-codegen-cranelift-preview"], profile = "minimal", mr_boxington = true } }
+run = 'mbx build --locked --workspace --all-targets -Z codegen-backend --config "profile.dev.codegen-backend=\"cranelift\"" --config "profile.dev.package.\"*\".codegen-backend=\"llvm\""'
 
 [tasks.bindings]
 description = "Acquire pinned Windows App SDK metadata and regenerate supplemental bindings"
