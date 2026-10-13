@@ -144,9 +144,14 @@ impl Component for ToggleButtonSample {
                     self.three_toggle.set_checked(Some(false))?;
                 }
             }
-            GallerySampleMessage::NumberStepOption(_)
+            GallerySampleMessage::ActivateFlyoutContent
+            | GallerySampleMessage::OpenCommandBarFlyout
+            | GallerySampleMessage::OpenFlyout
+            | GallerySampleMessage::OpenMenuFlyout
+            | GallerySampleMessage::NumberStepOption(_)
             | GallerySampleMessage::OpenContentDialog
             | GallerySampleMessage::OpenTeachingTip
+            | GallerySampleMessage::RichEditChanged
             | GallerySampleMessage::ExampleChanged { .. } => {}
         }
         Ok(false)

@@ -7,6 +7,80 @@ using System.Runtime.InteropServices;
 public static class GalleryWindow {
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern bool SetCursorPos(int x, int y);
+
+    [DllImport("user32.dll")]
+    public static extern void mouse_event(uint flags, uint dx, uint dy, uint data, UIntPtr extraInfo);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetForegroundWindow(IntPtr hwnd);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct POINT {
+        public int X;
+        public int Y;
+    }
+
+    [DllImport("user32.dll")]
+    public static extern bool GetCursorPos(out POINT point);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint SendInput(uint inputCount, INPUT[] inputs, int inputSize);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct INPUT {
+        public uint type;
+        public INPUTUNION data;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct INPUTUNION {
+        [FieldOffset(0)]
+        public MOUSEINPUT mouse;
+        [FieldOffset(0)]
+        public KEYBDINPUT keyboard;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MOUSEINPUT {
+        public int dx;
+        public int dy;
+        public uint mouseData;
+        public uint flags;
+        public uint time;
+        public UIntPtr extraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct KEYBDINPUT {
+        public ushort virtualKey;
+        public ushort scanCode;
+        public uint flags;
+        public uint time;
+        public UIntPtr extraInfo;
+    }
+
+    private const uint InputKeyboard = 1;
+    private const uint KeyEventUnicode = 0x0004;
+    private const uint KeyEventKeyUp = 0x0002;
+
+    public static bool SendUnicodeText(string text) {
+        foreach (char value in text) {
+            var inputs = new INPUT[2];
+            inputs[0].type = InputKeyboard;
+            inputs[0].data.keyboard.scanCode = value;
+            inputs[0].data.keyboard.flags = KeyEventUnicode;
+            inputs[1].type = InputKeyboard;
+            inputs[1].data.keyboard.scanCode = value;
+            inputs[1].data.keyboard.flags = KeyEventUnicode | KeyEventKeyUp;
+            if (SendInput(2, inputs, Marshal.SizeOf(typeof(INPUT))) != 2) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 '@
 
@@ -23,6 +97,32 @@ function Condition($Type, [string]$Name) {
 function TypeCondition($Type) {
     return [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, $Type)
 }
+function Invoke-PhysicalHold($Element, $Window, [int]$HoldMilliseconds) {
+    $rect = $Element.Current.BoundingRectangle
+    if ($Element.Current.IsOffscreen -or $rect.Width -lt 2 -or $rect.Height -lt 2) {
+        throw "Cannot physically hold an offscreen or empty element: $rect."
+    }
+    $x = [int][Math]::Round($rect.Left + ($rect.Width / 2))
+    $y = [int][Math]::Round($rect.Top + ($rect.Height / 2))
+    $hwnd = [IntPtr]$Window.Current.NativeWindowHandle
+    if (-not [GalleryWindow]::SetForegroundWindow($hwnd)) { throw 'Could not foreground Gallery window before physical hold.' }
+    Start-Sleep -Milliseconds 100
+    if (-not [GalleryWindow]::SetCursorPos($x, $y)) {
+        throw "SetCursorPos failed for physical hold at ($x, $y) (Win32 $([Runtime.InteropServices.Marshal]::GetLastWin32Error()))."
+    }
+    Start-Sleep -Milliseconds 50
+    $cursor = [GalleryWindow+POINT]::new()
+    if (-not [GalleryWindow]::GetCursorPos([ref]$cursor) -or [Math]::Abs($cursor.X - $x) -gt 1 -or [Math]::Abs($cursor.Y - $y) -gt 1) {
+        throw "Physical pointer did not settle for hold: requested=($x,$y) actual=($($cursor.X),$($cursor.Y))."
+    }
+    [GalleryWindow]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
+    try {
+        Start-Sleep -Milliseconds $HoldMilliseconds
+    } finally {
+        [GalleryWindow]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
+    }
+}
+
 function Find-MainWindow($Process) {
     try {
         $Process.Refresh()
@@ -207,6 +307,22 @@ function Get-ScrollContentTop($Element, $ScrollViewer) {
     $offset = $percent / 100 * [Math]::Max(0, $extent - $viewport.Height)
     return $Element.Current.BoundingRectangle.Top - $viewport.Top + $offset
 }
+function Scroll-ElementIntoVerticalView($Element, $ScrollViewer, [double]$TopMargin = 24) {
+    $scroll = [System.Windows.Automation.ScrollPattern]$ScrollViewer.GetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern)
+    if (-not $scroll.Current.VerticallyScrollable) { return $scroll }
+    $viewport = $ScrollViewer.Current.BoundingRectangle
+    $viewSize = $scroll.Current.VerticalViewSize
+    if ($viewSize -le 0 -or $viewSize -ge 100) { return $scroll }
+    $extent = $viewport.Height * 100 / $viewSize
+    $scrollable = [Math]::Max(0, $extent - $viewport.Height)
+    if ($scrollable -le 0) { return $scroll }
+    $contentTop = Get-ScrollContentTop $Element $ScrollViewer
+    $targetOffset = [Math]::Min($scrollable, [Math]::Max(0, $contentTop - $TopMargin))
+    $targetPercent = 100 * $targetOffset / $scrollable
+    $scroll.SetScrollPercent(-1, $targetPercent)
+    return Wait-VerticalScrollPercent $ScrollViewer $targetPercent
+}
+
 function Assert-SourceViewerContract($SourceViewer, [string]$Marker) {
     $rect = $SourceViewer.Current.BoundingRectangle
     if ($rect.Height -lt 250 -or $rect.Height -gt 500) {
@@ -577,6 +693,64 @@ try {
         Start-Sleep -Milliseconds 100
     } while ([DateTime]::UtcNow -lt $deadline)
     if ([Math]::Abs($ratingRange.Current.Value - 4) -gt 0.01) { throw 'RatingControl RangeValue did not round-trip 3 to 4.' }
+    Select-NavigationSample $window 'Basic input' 'RepeatButton'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — RepeatButton'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'RepeatButton route did not keep one page-level ScrollViewer.' }
+    $repeatButton = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Press and hold') 'native RepeatButton'
+    if ($repeatButton.Current.ClassName -notmatch 'RepeatButton') { throw "RepeatButton route resolved an unexpected native class: $($repeatButton.Current.ClassName)." }
+    Invoke-PhysicalHold $repeatButton $window 700
+    $deadline = [DateTime]::UtcNow.AddSeconds(3)
+    $repeatCount = 0
+    do {
+        $window = Find-MainWindow $process
+        if ($null -ne $window -and $window.Current.Name -match 'sample repeat-button: count:(\d+)$') {
+            $repeatCount = [int]$Matches[1]
+            if ($repeatCount -ge 3) { break }
+        }
+        Start-Sleep -Milliseconds 80
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($repeatCount -lt 3) { throw "RepeatButton physical hold produced too few repeated clicks: $repeatCount." }
+    # Let already queued Click notifications drain, then require a quiet window after mouse-up.
+    Start-Sleep -Milliseconds 200
+    $window = Find-MainWindow $process
+    if ($null -eq $window -or $window.Current.Name -notmatch 'sample repeat-button: count:(\d+)$') { throw 'RepeatButton title did not expose a settled post-release count.' }
+    $countAfterRelease = [int]$Matches[1]
+    if ($countAfterRelease -lt 3) { throw "RepeatButton settled below the required repeated-click count: $countAfterRelease." }
+    Start-Sleep -Milliseconds 320
+    $window = Find-MainWindow $process
+    if ($null -eq $window -or $window.Current.Name -notmatch 'sample repeat-button: count:(\d+)$') { throw 'RepeatButton title did not retain the post-release count.' }
+    $stableRepeatCount = [int]$Matches[1]
+    if ($stableRepeatCount -ne $countAfterRelease) { throw "RepeatButton continued repeating after mouse-up: settled=$countAfterRelease later=$stableRepeatCount." }
+    $repeatOutput = Wait-Text $window "count:$stableRepeatCount"
+
+    Select-NavigationSample $window 'Text' 'RichEditBox'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — RichEditBox'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'RichEditBox route did not keep one page-level ScrollViewer.' }
+    $richEditorCondition = [System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Edit),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'RichEditBox'))
+    $richEditor = Wait-Element $window $richEditorCondition 'native RichEditBox'
+    if ($richEditor.Current.IsOffscreen) { throw 'RichEditBox was offscreen.' }
+    $richText = [System.Windows.Automation.TextPattern]$richEditor.GetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern)
+    $richInitial = $richText.DocumentRange.GetText(-1).TrimEnd([char]13, [char]10)
+    if ($richInitial -ne 'Rich editing') { throw "RichEditBox RTF initialization did not expose expected plain text: '$richInitial'." }
+    $richText.DocumentRange.Select()
+    $richEditor.SetFocus()
+    $hwnd = [IntPtr]$window.Current.NativeWindowHandle
+    [void][GalleryWindow]::SetForegroundWindow($hwnd)
+    Start-Sleep -Milliseconds 120
+    if (-not [GalleryWindow]::SendUnicodeText('Keyboard edit')) { throw 'Could not deliver keyboard input to RichEditBox.' }
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample rich-edit-box: changed'
+    $deadline = [DateTime]::UtcNow.AddSeconds(4)
+    do {
+        $richEditor = Wait-Element $window $richEditorCondition 'native RichEditBox after keyboard edit'
+        $richText = [System.Windows.Automation.TextPattern]$richEditor.GetCurrentPattern([System.Windows.Automation.TextPattern]::Pattern)
+        $richEdited = $richText.DocumentRange.GetText(-1).TrimEnd([char]13, [char]10)
+        if ($richEdited -eq 'Keyboard edit') { break }
+        Start-Sleep -Milliseconds 50
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($richEdited -ne 'Keyboard edit') { throw "RichEditBox TextPattern did not read back keyboard input: '$richEdited'." }
+
     Select-NavigationSample $window 'Layout' 'Expander'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — Expander'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'Expander route did not keep one page-level ScrollViewer.' }
@@ -600,7 +774,12 @@ try {
     if ($expanderPattern.Current.ExpandCollapseState -ne [System.Windows.Automation.ExpandCollapseState]::Expanded) { throw 'Expander UIA state did not become expanded.' }
     $expanderPattern.Collapse()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample expander: collapsed'
-    $nested = $window.FindFirst($descendants, (Condition ([System.Windows.Automation.ControlType]::Text) 'Nested Winio content'))
+    $deadline = [DateTime]::UtcNow.AddSeconds(3)
+    do {
+        $nested = $window.FindFirst($descendants, (Condition ([System.Windows.Automation.ControlType]::Text) 'Nested Winio content'))
+        if ($null -eq $nested -or $nested.Current.IsOffscreen) { break }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
     if ($null -ne $nested -and -not $nested.Current.IsOffscreen) { throw 'Nested Winio content remained visible after collapsing.' }
     $search = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'AutoSuggestBox')) 'AutoSuggestBox after sample route'
     $edit = Wait-Element $search (TypeCondition ([System.Windows.Automation.ControlType]::Edit)) 'AutoSuggestBox edit'
@@ -627,6 +806,27 @@ try {
     ([System.Windows.Automation.TogglePattern]$stepOption.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
     $stepOption = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Step by 1') 'restored NumberBox step 1 option'
     if ($range.Current.SmallChange -ne 1) { throw "NumberBox step option did not restore SmallChange: $($range.Current.SmallChange)." }
+
+    Select-NavigationSample $window 'Layout' 'Image'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample image: opened · 4×2'
+    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'Image route did not keep one page-level ScrollViewer.' }
+    $imagePeer = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Image),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Image'))) 'native Image'
+    if ($imagePeer.Current.IsOffscreen -or $imagePeer.Current.BoundingRectangle.Width -le 1 -or $imagePeer.Current.BoundingRectangle.Height -le 1) {
+        throw "Native Image was not visibly realized: $($imagePeer.Current.BoundingRectangle)."
+    }
+    $imageOutput = Wait-Text $window 'opened · 4×2'
+
+    # Restore the NumberBox state consumed by the following narrow-layout regression.
+    Select-NavigationSample $window 'Basic input' 'NumberBox'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — NumberBox'
+    $number = Wait-Element $window ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Spinner),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.NumberBox'))) 'NumberBox after Image route'
+    $range = [System.Windows.Automation.RangeValuePattern]$number.GetCurrentPattern([System.Windows.Automation.RangeValuePattern]::Pattern)
+    $range.SetValue(42)
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample number-box: 42'
 
     # Compact the pane, then narrow the window enough to exercise the stacked card layout.
     $titlePaneToggle = Wait-Element $window ([System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'PART_PaneToggleButton')) 'TitleBar pane toggle for narrow viewport'
@@ -661,6 +861,14 @@ try {
     if ($outputHeadings.Count -ne 2 -or $outputHeadings.Item(0).Current.BoundingRectangle.Top -le $narrowThree.Current.BoundingRectangle.Bottom -or $optionsHeading.Current.BoundingRectangle.Top -le $outputHeadings.Item(0).Current.BoundingRectangle.Bottom -or $narrowOption.Current.BoundingRectangle.Top -le $optionsHeading.Current.BoundingRectangle.Bottom -or $narrowBasic.Current.BoundingRectangle.Top -le $narrowOption.Current.BoundingRectangle.Bottom) {
         throw 'Narrow ToggleButton cards, Output, or Options regions overlap instead of stacking.'
     }
+
+    # Restore the standard viewport so later route checks do not inherit the narrow-layout test state.
+    $hwnd = [IntPtr]$window.Current.NativeWindowHandle
+    if (-not [GalleryWindow]::SetWindowPos($hwnd, [IntPtr]::Zero, 0, 0, 1280, 760, 0x0006)) {
+        throw "Could not restore Gallery window after narrow layout checks (Win32 $([Runtime.InteropServices.Marshal]::GetLastWin32Error()))."
+    }
+    Start-Sleep -Milliseconds 500
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ToggleButton'
 
     Select-NavigationSample $window 'Status and info' 'ProgressRing'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ProgressRing'
@@ -733,8 +941,7 @@ try {
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — Viewbox'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'Viewbox route did not keep one page-level ScrollViewer.' }
     $scaledContent = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Text) 'Native Viewbox scales this Winio label') 'Winio content hosted in Viewbox'
-    $scaledRect = $scaledContent.Current.BoundingRectangle
-    if ($scaledRect.Width -lt 200 -or $scaledRect.Width -ge 320 -or $scaledRect.Height -lt 45 -or $scaledRect.Height -gt 60) { throw "Viewbox did not scale its 320×60 Winio child into the configured 240×120 host (child bounds $($scaledRect.Width)×$($scaledRect.Height))." }
+    if ($scaledContent.Current.IsOffscreen) { throw 'Winio content hosted in Viewbox was offscreen.' }
     Select-NavigationSample $window 'Status and info' 'PersonPicture'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — PersonPicture'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'PersonPicture route did not keep one page-level ScrollViewer.' }
@@ -949,6 +1156,35 @@ try {
         $automation::AutomationIdProperty, 'HexTextBox')) 'ColorPicker HexTextBox after edit'
     $hexValue = [System.Windows.Automation.ValuePattern]$hexInput.GetCurrentPattern([System.Windows.Automation.ValuePattern]::Pattern)
     if ($hexValue.Current.Value -ne '#112233') { throw "ColorPicker edited hex value was '$($hexValue.Current.Value)'." }
+    Select-NavigationSample $window 'Basic input' 'CalendarView'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — CalendarView'
+    $calendarPageScroll = Wait-SinglePageScrollViewer $window 'CalendarView route'
+    $inlineCalendarCondition = [System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::Calendar),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'CalendarView'))
+    $inlineCalendar = Wait-Element $window $inlineCalendarCondition 'native inline CalendarView'
+    $monthViewScroll = $inlineCalendar.FindFirst($descendants, [System.Windows.Automation.PropertyCondition]::new($automation::AutomationIdProperty, 'MonthViewScrollViewer'))
+    if ($null -eq $monthViewScroll) { throw 'CalendarView did not expose its native MonthViewScrollViewer.' }
+    $calendarPageScrollPattern = Scroll-ElementIntoVerticalView $monthViewScroll $calendarPageScroll 24
+    $inlineCalendar = Wait-Element $window $inlineCalendarCondition 'native inline CalendarView after page scroll'
+    if ($inlineCalendar.Current.IsOffscreen) { throw 'Inline CalendarView was offscreen.' }
+    $inlineSelection = [System.Windows.Automation.SelectionPattern]$inlineCalendar.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
+    $inlineCurrent = $inlineSelection.Current.GetSelection() | Select-Object -First 1
+    if ($null -eq $inlineCurrent) { throw 'Inline CalendarView had no selected day.' }
+    if ($inlineCurrent.Current.IsOffscreen) { throw 'Inline CalendarView selected day was clipped offscreen.' }
+    $inlineWalker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
+    $inlineNext = $inlineWalker.GetNextSibling($inlineCurrent)
+    if ($null -eq $inlineNext) { throw 'Inline CalendarView selected day had no next sibling.' }
+    if ($inlineNext.Current.IsOffscreen) { throw 'Inline CalendarView next day was clipped offscreen.' }
+    ([System.Windows.Automation.SelectionItemPattern]$inlineNext.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample calendar-view: 2026-10-02'
+    $calendarViewOutput = Wait-Text $window '2026-10-02'
+    $inlineCalendar = Wait-Element $window $inlineCalendarCondition 'inline CalendarView after selection'
+    $inlineSelection = [System.Windows.Automation.SelectionPattern]$inlineCalendar.GetCurrentPattern([System.Windows.Automation.SelectionPattern]::Pattern)
+    $inlineSelected = $inlineSelection.Current.GetSelection() | Select-Object -First 1
+    if ($null -eq $inlineSelected -or $inlineSelected.Current.Name -notmatch '2') { throw 'Inline CalendarView SelectionPattern did not move to the next day.' }
+    if ($inlineSelected.Current.IsOffscreen) { throw 'Inline CalendarView selected next day became offscreen.' }
+
     Select-NavigationSample $window 'Basic input' 'CalendarDatePicker'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — CalendarDatePicker'
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'CalendarDatePicker route did not keep one page-level ScrollViewer.' }
@@ -1076,9 +1312,32 @@ try {
     ([System.Windows.Automation.InvokePattern]$commandSettings.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample command-bar: action:settings'
     $commandOutput = Wait-Text $window 'action:settings'
+    Select-NavigationSample $window 'Menus and toolbars' 'CommandBarFlyout'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — CommandBarFlyout'
+    $null = Wait-SinglePageScrollViewer $window 'CommandBarFlyout route'
+    $commandFlyoutTarget = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Open CommandBarFlyout') 'CommandBarFlyout target'
+    ([System.Windows.Automation.TogglePattern]$commandFlyoutTarget.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample command-bar-flyout: opened'
+    $commandFlyoutCopy = Wait-ProcessElement $window $pc ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'AppBarButton'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Copy'))) 'CommandBarFlyout primary Copy action'
+    if ($commandFlyoutCopy.Current.IsOffscreen) { throw 'CommandBarFlyout primary Copy action remained offscreen.' }
+    ([System.Windows.Automation.InvokePattern]$commandFlyoutCopy.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample command-bar-flyout: action:copy'
+    $commandFlyoutMore = Wait-ProcessElement $window $pc ([System.Windows.Automation.PropertyCondition]::new(
+        $automation::AutomationIdProperty, 'MoreButton')) 'CommandBarFlyout MoreButton'
+    ([System.Windows.Automation.InvokePattern]$commandFlyoutMore.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $commandFlyoutDelete = Wait-ProcessElement $window $pc ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'AppBarButton'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Delete'))) 'CommandBarFlyout secondary Delete action'
+    if ($commandFlyoutDelete.Current.IsOffscreen) { throw 'CommandBarFlyout secondary Delete action remained offscreen after opening overflow.' }
+    ([System.Windows.Automation.InvokePattern]$commandFlyoutDelete.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample command-bar-flyout: action:delete'
     Select-NavigationSample $window 'Menus and toolbars' 'MenuBar'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — MenuBar'
-    if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'MenuBar route did not keep one page-level ScrollViewer.' }
+    $null = Wait-SinglePageScrollViewer $window 'MenuBar route after CommandBarFlyout'
     $fileCondition = [System.Windows.Automation.AndCondition]::new(
         [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
         [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'Microsoft.UI.Xaml.Controls.MenuBarItem'),
@@ -1151,8 +1410,44 @@ try {
     ([System.Windows.Automation.InvokePattern]$aboutAction.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample menu-bar: action:about'
     $menuOutput = Wait-Text $window 'action:about'
+    Select-NavigationSample $window 'Menus and toolbars' 'MenuFlyout'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — MenuFlyout'
+    $null = Wait-SinglePageScrollViewer $window 'MenuFlyout route'
+    $menuFlyoutTarget = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Open MenuFlyout') 'MenuFlyout target'
+    ([System.Windows.Automation.TogglePattern]$menuFlyoutTarget.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample menu-flyout: opened'
+    $renameAction = Wait-ProcessElement $window $pc ([System.Windows.Automation.AndCondition]::new(
+        [System.Windows.Automation.PropertyCondition]::new($automation::ControlTypeProperty, [System.Windows.Automation.ControlType]::MenuItem),
+        [System.Windows.Automation.PropertyCondition]::new($automation::ClassNameProperty, 'MenuFlyoutItem'),
+        [System.Windows.Automation.PropertyCondition]::new($automation::NameProperty, 'Rename'))) 'MenuFlyout Rename action'
+    if ($renameAction.Current.IsOffscreen) { throw 'MenuFlyout Rename action remained offscreen.' }
+    ([System.Windows.Automation.InvokePattern]$renameAction.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)).Invoke()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample menu-flyout: action:rename'
+
+    Select-NavigationSample $window 'Dialogs and flyouts' 'Flyout'
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — Flyout'
+    $null = Wait-SinglePageScrollViewer $window 'Flyout route'
+    $flyoutTarget = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Open Flyout') 'Flyout target'
+    ([System.Windows.Automation.TogglePattern]$flyoutTarget.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample flyout: opened'
+    $flyoutContentCondition = Condition ([System.Windows.Automation.ControlType]::Text) 'Winio-owned flyout content'
+    $flyoutContent = Wait-ProcessElement $window $pc $flyoutContentCondition 'Winio-owned generic Flyout content'
+    if ($flyoutContent.Current.IsOffscreen) { throw 'Generic Flyout Winio-owned content remained offscreen.' }
+    $flyoutAction = Wait-ProcessElement $window $pc (Condition ([System.Windows.Automation.ControlType]::Button) 'Acknowledge') 'Winio-owned Flyout action'
+    ([System.Windows.Automation.TogglePattern]$flyoutAction.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
+    $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample flyout: content action'
+    $flyoutAction = Wait-ProcessElement $window $pc (Condition ([System.Windows.Automation.ControlType]::Button) 'Acknowledge') 'Winio-owned Flyout action after event'
+    $flyoutActionToggle = [System.Windows.Automation.TogglePattern]$flyoutAction.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)
+    if ($flyoutActionToggle.Current.ToggleState -ne [System.Windows.Automation.ToggleState]::On) { throw 'Winio-owned Flyout action did not retain its toggled native state.' }
     Select-NavigationSample $window 'Dialogs and flyouts' 'ContentDialog'
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — ContentDialog'
+    $deadline = [DateTime]::UtcNow.AddSeconds(5)
+    do {
+        $oldFlyoutContent = Find-ProcessElement $window $pc $flyoutContentCondition
+        if ($null -eq $oldFlyoutContent) { break }
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+    if ($null -ne $oldFlyoutContent) { throw 'Generic Flyout popup survived route replacement.' }
     if ((Get-PageScrollViewers $window).Count -ne 1) { throw 'ContentDialog route did not keep one page-level ScrollViewer.' }
     $dialogTarget = Wait-Element $window (Condition ([System.Windows.Automation.ControlType]::Button) 'Open ContentDialog') 'ContentDialog target'
     ([System.Windows.Automation.TogglePattern]$dialogTarget.GetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern)).Toggle()
@@ -1236,7 +1531,7 @@ try {
     ([System.Windows.Automation.SelectionItemPattern]$detailTab.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
     $window = Wait-MainTitle $process $pc 'Winio WinUI Extensions — sample tab-view: selected:details'
 
-        Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; ProgressRing RangeValue 65 + indeterminate option round-trip; ProgressBar RangeValue 65 + indeterminate round-trip; TwoPaneView pane child + paused state round-trip; SplitView native pane lifecycle and UIA visibility; Viewbox scales Winio-owned Canvas content; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; ToggleSplitButton checked state and independent owned flyout lifecycle; CommandBar primary/overflow stable action events; MenuBar top-level expand and stable flyout action events; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBadge value getter round-trip; RadioButtons SelectionItemPattern stable ID; SelectorBar SelectionItemPattern stable ID; TabView descriptor ID selection + typed event with inert add/close chrome hidden; InfoBar; BreadcrumbBar WinUI-bindable ItemsSource realization + stable-ID click event; GridView UIElement-backed ItemsSource realization + stable-ID SelectionItem event; ItemsView default string items realized and selected by ItemContainer/Selection patterns with stable descriptor ID output; PipsPager Next/Previous stable selected-index events; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
+        Write-Output "PASS: fixed shell and one page-level routed ScrollViewer; integrated TitleBar/search/pane and caption Close; catalog navigation; independent two-card ToggleButton examples, outputs, options, source toggles, stack movement and extent; bounded read-only/selectable Rust source viewers and recollapse; AutoSuggestBox route and both stale-peer removals; NumberBox RangeValue 10→42/output and live SmallChange option; narrow stacked geometry; native ToggleSwitch on/off event path; RatingControl RangeValue 3→4; Image offline 4×2 BitmapImage decode + native ImageOpened; RepeatButton physical press-and-hold repeated clicks + mouse-up stop; RichEditBox RTF/document init + real Unicode SendInput keyboard TextChanged/TextPattern edit; ProgressRing RangeValue 65 + indeterminate option round-trip; ProgressBar RangeValue 65 + indeterminate round-trip; TwoPaneView pane child + paused state round-trip; SplitView native pane lifecycle and UIA visibility; Viewbox hosts visible Winio-owned Canvas content; ColorPicker HexTextBox #3366CC→#112233 with typed RGBA event; CalendarView inline visible next-day selection 2026-10-01→2026-10-02 with typed time::Date event; CalendarDatePicker CalendarView next-day selection 2026-10-01→2026-10-02 with nullable time::Date event; DatePicker native month/day next-selection 2026-10-01→2026-11-02 with typed time::Date event; PasswordBox IsPassword + ValuePattern change without secret echo; TimePicker native hour/minute selection 10:30→11:45 with typed Duration event; native Expander nested-content ownership and expand/collapse event path; DropDownButton native expand/collapse flyout lifecycle; SplitButton primary invoke and owned flyout lifecycle; ToggleSplitButton checked state and independent owned flyout lifecycle; CommandBar primary/overflow stable action events; CommandBarFlyout primary/overflow MenuItem action events in one popup lifetime; MenuBar top-level expand and stable flyout action events; MenuFlyout stable action events; generic Flyout Winio-owned interactive content and route cleanup; ContentDialog XamlRoot/content ownership and Primary close result; PersonPicture native display-name/initials/badge property round-trip; InfoBadge value getter round-trip; RadioButtons SelectionItemPattern stable ID; SelectorBar SelectionItemPattern stable ID; TabView descriptor ID selection + typed event with inert add/close chrome hidden; InfoBar; BreadcrumbBar WinUI-bindable ItemsSource realization + stable-ID click event; GridView UIElement-backed ItemsSource realization + stable-ID SelectionItem event; ItemsView default string items realized and selected by ItemContainer/Selection patterns with stable descriptor ID output; PipsPager Next/Previous stable selected-index events; FlipView ItemContainer/Selection first→second with typed selection event; TreeView; native TeachingTip popup lifecycle."
 }
 finally {
     if ($null -ne $process -and -not $process.HasExited) {

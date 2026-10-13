@@ -6,11 +6,16 @@ pub enum GallerySampleMessage {
     SetBounds(Rect),
     Emit(String),
     ExampleChanged { card: CardId, value: String },
+    ActivateFlyoutContent,
+    OpenCommandBarFlyout,
     OpenContentDialog,
+    OpenFlyout,
+    OpenMenuFlyout,
     OpenTeachingTip,
     SourceExpanded { card: CardId, expanded: bool },
     ToggleThreeState(bool),
     NumberStepOption(bool),
+    RichEditChanged,
 }
 
 pub struct GallerySampleInit<'a> {
@@ -77,6 +82,11 @@ pub async fn create_sample(
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::CalendarView => {
+            Child::<samples::calendar_view::CalendarViewSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::ColorPicker => {
             Child::<samples::color_picker::ColorPickerSample>::init(init)
                 .await?
@@ -87,11 +97,19 @@ pub async fn create_sample(
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::CommandBarFlyout => {
+            Child::<samples::command_bar_flyout::CommandBarFlyoutSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::ContentDialog => {
             Child::<samples::content_dialog::ContentDialogSample>::init(init)
                 .await?
                 .into_boxed()
         }
+        GallerySampleKind::Flyout => Child::<samples::flyout::FlyoutSample>::init(init)
+            .await?
+            .into_boxed(),
         GallerySampleKind::DatePicker => {
             Child::<samples::date_picker::DatePickerSample>::init(init)
                 .await?
@@ -117,9 +135,17 @@ pub async fn create_sample(
         GallerySampleKind::InfoBar => Child::<samples::info_bar::InfoBarSample>::init(init)
             .await?
             .into_boxed(),
+        GallerySampleKind::Image => Child::<samples::image::ImageSample>::init(init)
+            .await?
+            .into_boxed(),
         GallerySampleKind::MenuBar => Child::<samples::menu_bar::MenuBarSample>::init(init)
             .await?
             .into_boxed(),
+        GallerySampleKind::MenuFlyout => {
+            Child::<samples::menu_flyout::MenuFlyoutSample>::init(init)
+                .await?
+                .into_boxed()
+        }
         GallerySampleKind::NumberBox => Child::<samples::number_box::NumberBoxSample>::init(init)
             .await?
             .into_boxed(),
@@ -148,6 +174,16 @@ pub async fn create_sample(
         }
         GallerySampleKind::RatingControl => {
             Child::<samples::rating_control::RatingControlSample>::init(init)
+                .await?
+                .into_boxed()
+        }
+        GallerySampleKind::RepeatButton => {
+            Child::<samples::repeat_button::RepeatButtonSample>::init(init)
+                .await?
+                .into_boxed()
+        }
+        GallerySampleKind::RichEditBox => {
+            Child::<samples::rich_edit_box::RichEditBoxSample>::init(init)
                 .await?
                 .into_boxed()
         }

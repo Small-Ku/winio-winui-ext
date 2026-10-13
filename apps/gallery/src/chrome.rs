@@ -43,17 +43,39 @@ impl CardLayout {
         has_options: bool,
         source_expanded: bool,
     ) -> Self {
+        Self::calculate_with_primary_constraints(
+            viewport_width,
+            has_output,
+            has_options,
+            source_expanded,
+            None,
+            None,
+        )
+    }
+
+    pub fn calculate_with_primary_constraints(
+        viewport_width: f64,
+        has_output: bool,
+        has_options: bool,
+        source_expanded: bool,
+        primary_height: Option<f64>,
+        min_primary_width: Option<f64>,
+    ) -> Self {
         let width = viewport_width.clamp(0.0, PAGE_MAX_WIDTH);
         let inner = (width - 2.0 * CARD_PADDING).max(0.0);
-        let wide = width >= NARROW_BREAKPOINT && (has_output || has_options);
+        let wide_main_width = (inner * 0.62).min(inner - 300.0).max(250.0);
+        let min_primary_width = min_primary_width.unwrap_or(0.0).max(0.0);
+        let wide = width >= NARROW_BREAKPOINT
+            && (has_output || has_options)
+            && wide_main_width >= min_primary_width;
         let mut output = None;
         let mut options = None;
         let top = 92.0;
         let (primary, section_bottom) = if wide {
-            let main_width = (inner * 0.62).min(inner - 300.0).max(250.0);
+            let main_width = wide_main_width;
             let side_left = CARD_PADDING + main_width + CARD_GAP;
             let side_width = (inner - main_width - CARD_GAP).max(220.0);
-            let primary_height = 176.0;
+            let primary_height = primary_height.unwrap_or(176.0).max(0.0);
             let mut side_y = top;
             if has_output {
                 output = Some(Rect::new(
@@ -77,8 +99,12 @@ impl CardLayout {
                 (top + primary_height).max(side_y),
             )
         } else {
-            let primary = Rect::new(Point::new(CARD_PADDING, top), Size::new(inner, 132.0));
-            let mut y = top + 132.0 + CARD_GAP;
+            let primary_height = primary_height.unwrap_or(132.0).max(0.0);
+            let primary = Rect::new(
+                Point::new(CARD_PADDING, top),
+                Size::new(inner, primary_height),
+            );
+            let mut y = top + primary_height + CARD_GAP;
             if has_output {
                 output = Some(Rect::new(
                     Point::new(CARD_PADDING, y),
@@ -200,6 +226,8 @@ pub struct GalleryExample {
     id: CardId,
     has_output: bool,
     has_options: bool,
+    primary_height: Option<f64>,
+    min_primary_width: Option<f64>,
 }
 
 impl GalleryExample {
@@ -255,6 +283,8 @@ impl GalleryExample {
             id,
             has_output,
             has_options,
+            primary_height: None,
+            min_primary_width: None,
         })
     }
 
@@ -262,8 +292,27 @@ impl GalleryExample {
         self.id
     }
 
+    pub fn set_primary_height(&mut self, height: f64) {
+        self.primary_height = Some(height.max(0.0));
+    }
+
+    pub fn set_min_primary_width(&mut self, width: f64) {
+        self.min_primary_width = Some(width.max(0.0));
+    }
+
     pub fn calculate_layout(&self, width: f64, source_expanded: bool) -> CardLayout {
-        CardLayout::calculate(width, self.has_output, self.has_options, source_expanded)
+        if self.primary_height.is_none() && self.min_primary_width.is_none() {
+            CardLayout::calculate(width, self.has_output, self.has_options, source_expanded)
+        } else {
+            CardLayout::calculate_with_primary_constraints(
+                width,
+                self.has_output,
+                self.has_options,
+                source_expanded,
+                self.primary_height,
+                self.min_primary_width,
+            )
+        }
     }
 
     pub fn set_layout(&mut self, top: f64, layout: CardLayout) -> Result<()> {
@@ -522,6 +571,45 @@ mod tests {
         assert!(wide.output.unwrap().origin.x > wide.primary.origin.x);
         assert_eq!(narrow.primary.origin.x, narrow.output.unwrap().origin.x);
         assert!(narrow.options.unwrap().origin.y > narrow.output.unwrap().max_y());
+    }
+    #[test]
+    fn custom_primary_height_pushes_side_and_stacked_sections() {
+        let wide = CardLayout::calculate_with_primary_constraints(
+            1064.0,
+            true,
+            false,
+            false,
+            Some(360.0),
+            None,
+        );
+        let narrow = CardLayout::calculate_with_primary_constraints(
+            560.0,
+            true,
+            false,
+            false,
+            Some(360.0),
+            None,
+        );
+        assert_eq!(wide.primary.size.height, 360.0);
+        assert_eq!(narrow.primary.size.height, 360.0);
+        assert!(wide.source_toggle.origin.y > wide.primary.max_y());
+        assert!(narrow.output.unwrap().origin.y > narrow.primary.max_y());
+    }
+    #[test]
+    fn min_primary_width_forces_stacked_sections_when_side_layout_is_too_narrow() {
+        let unconstrained = CardLayout::calculate(830.0, true, false, false);
+        let constrained = CardLayout::calculate_with_primary_constraints(
+            830.0,
+            true,
+            false,
+            false,
+            Some(360.0),
+            Some(520.0),
+        );
+        assert!(unconstrained.wide);
+        assert!(!constrained.wide);
+        assert!(constrained.primary.size.width > unconstrained.primary.size.width);
+        assert!(constrained.output.unwrap().origin.y > constrained.primary.max_y());
     }
     #[test]
     fn page_caps_width_and_stacks_card_extents() {

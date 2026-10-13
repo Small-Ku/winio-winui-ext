@@ -10,19 +10,24 @@ mod controls {
     mod auto_suggest_box;
     mod breadcrumb_bar;
     mod calendar_date_picker;
+    mod calendar_view;
     mod color_picker;
     mod command_bar;
+    mod command_bar_flyout;
     mod content_dialog;
     mod date_picker;
     mod drop_down_button;
     mod expander;
     mod flip_view;
+    mod flyout;
     mod grid_view;
+    mod image;
     mod info_badge;
     mod info_bar;
     mod integrated_title_bar;
     mod items_view;
     mod menu_bar;
+    mod menu_flyout;
     mod navigation_view;
     mod number_box;
     mod password_box;
@@ -32,6 +37,8 @@ mod controls {
     mod progress_ring;
     mod radio_buttons;
     mod rating_control;
+    mod repeat_button;
+    mod rich_edit_box;
     mod selector_bar;
     mod split_button;
     mod split_view;
@@ -55,8 +62,12 @@ mod controls {
     pub use calendar_date_picker::{
         CalendarDatePicker, CalendarDatePickerEvent, CalendarDatePickerMessage,
     };
+    pub use calendar_view::{CalendarView, CalendarViewEvent, CalendarViewMessage};
     pub use color_picker::{ColorPicker, ColorPickerEvent, ColorPickerMessage};
     pub use command_bar::{CommandBar, CommandBarAction, CommandBarEvent, CommandBarMessage};
+    pub use command_bar_flyout::{
+        CommandBarFlyout, CommandBarFlyoutEvent, CommandBarFlyoutMessage,
+    };
     pub use content_dialog::{
         ContentDialog, ContentDialogCloseResult, ContentDialogDefaultButton, ContentDialogEvent,
         ContentDialogMessage,
@@ -65,7 +76,9 @@ mod controls {
     pub use drop_down_button::{DropDownButton, DropDownButtonEvent, DropDownButtonMessage};
     pub use expander::{Expander, ExpanderEvent, ExpanderMessage};
     pub use flip_view::{FlipView, FlipViewEvent, FlipViewMessage, FlipViewPage};
+    pub use flyout::{Flyout, FlyoutEvent, FlyoutMessage};
     pub use grid_view::{GridView, GridViewEvent, GridViewItemDescriptor, GridViewMessage};
+    pub use image::{BitmapImage, Image, ImageEvent, ImageMessage, ImageSource};
     pub use info_badge::{InfoBadge, InfoBadgeMessage};
     pub use info_bar::{InfoBar, InfoBarMessage};
     pub use integrated_title_bar::{
@@ -74,6 +87,7 @@ mod controls {
     };
     pub use items_view::{ItemsView, ItemsViewEvent, ItemsViewItemDescriptor, ItemsViewMessage};
     pub use menu_bar::{MenuBar, MenuBarAction, MenuBarEvent, MenuBarMenu, MenuBarMessage};
+    pub use menu_flyout::{MenuFlyout, MenuFlyoutEvent, MenuFlyoutMessage};
     pub use navigation_view::{
         NavigationView, NavigationViewEvent, NavigationViewItemDescriptor, NavigationViewItemIcon,
         NavigationViewMessage, NavigationViewPaneDisplayMode,
@@ -90,6 +104,8 @@ mod controls {
         RadioButtonOption, RadioButtons, RadioButtonsEvent, RadioButtonsMessage,
     };
     pub use rating_control::{RatingControl, RatingControlEvent, RatingControlMessage};
+    pub use repeat_button::{RepeatButton, RepeatButtonEvent, RepeatButtonMessage};
+    pub use rich_edit_box::{RichEditBox, RichEditBoxEvent, RichEditBoxMessage};
     pub use selector_bar::{
         SelectorBar, SelectorBarEvent, SelectorBarItemDescriptor, SelectorBarMessage,
     };
