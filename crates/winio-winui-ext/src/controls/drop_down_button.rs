@@ -15,7 +15,7 @@ use crate::native::NativeElement;
 type SetButtonFlyoutFn =
     unsafe extern "system" fn(*mut core::ffi::c_void, *mut core::ffi::c_void) -> HRESULT;
 
-/// winio-winui3 0.4.4 projects Microsoft.UI.Xaml.Controls.IButton but cannot
+/// winio-winui3 0.4.5 projects Microsoft.UI.Xaml.Controls.IButton but cannot
 /// expose its Flyout accessors because its projection omits FlyoutBase.
 /// The WinRT ABI is still present: after the six IInspectable slots,
 /// IButton::Flyout and IButton::SetFlyout are slots 6 and 7.

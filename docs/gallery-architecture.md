@@ -1,37 +1,69 @@
 # Gallery architecture
 
-## M2 shell and routing responsibilities
+The Gallery demonstrates WinUI controls hosted by Winio. Its shell owns navigation and window chrome; each route owns the controls it displays. Native controls keep the same parent for their lifetime.
 
-`MainModel` owns the permanent shell: the Window, integrated TitleBar, NavigationView, and independent AutoSuggestBox. The typed catalog in `apps/gallery/src/catalog.rs` defines stable sample IDs, titles, sections, keywords, and descriptions. Navigation hierarchy and search suggestions are both derived from that catalog. Each selected route is constructed by one async factory and stored in the shell's single boxed sample slot.
+## Shell and routes
 
-Each routed sample owns its controls behind the shared boxed component contract. The shell sends a common `SetBounds(Rect)` viewport message. Routed control pages own one `GalleryPage` and one vertical Winio `ScrollView`, while Home owns a simpler `ScrollView` landing page. A routed page can contain N `GalleryExample` cards. Native sample events pass through the sample's `ComponentSender` and become common output events handled by the shell.
+`MainModel` in `apps/gallery/src/main.rs` owns the window, `IntegratedTitleBar`, `NavigationView`, and an independent `AutoSuggestBox`. The typed catalog in `apps/gallery/src/catalog.rs` defines sample IDs, titles, sections, search terms, and descriptions. Both navigation and search read the same catalog.
 
-## Why the boxed slot works
+When a route changes, the shell:
 
-Winio's `BoxComponent` erases the concrete `Component` type while preserving the shared Message, Event, and Error types. It does not erase `AsWidget` or `Layoutable`, so the shell never lays out the boxed component directly. Each concrete sample keeps its own container/layout boundary: control pages use `GalleryPage` as the single ScrollView owner and `GalleryExample` as card-local roots; Home uses a `ScrollView` directly. Card roots are created under page scroll content, and all card chrome and sample controls are constructed beneath their owning card from the start. No Winio-owned native element is transferred to another native content host.
+1. Builds the new sample through an async factory.
+2. Replaces its single boxed sample component.
+3. Drops the old sample and its native controls.
+4. Accepts output events only when both the route ID and sample generation match the active sample.
 
-Replacing the boxed child during a shell update drops the old sample and its View/native controls. Winio's run loop starts a fresh `model.start()` future after each message or event; the next iteration therefore polls the newly installed child's `start()` path. The UIA smoke verifies both ToggleButton example controls disappear from the main window subtree after routing to NumberBox.
+A monotonically increasing generation prevents late callbacks from an old route from updating a new instance of the same sample. Selecting the already active route does not rebuild it.
 
-Every routed sample instance receives a monotonically increasing generation. Output events carry both that generation and the stable sample ID, and the shell accepts an event only when both match the current routed instance. This prevents delayed callbacks from a dropped sample from mutating the current page, including the case where the user later returns to the same sample kind. Re-selecting the already active sample is a no-op instead of rebuilding it.
+### Why `BoxComponent` is used
 
-## Shell chrome
+`BoxComponent` allows different samples to share the same `Message`, `Event`, and `Error` types. It does not supply `AsWidget` or `Layoutable` for layout, so each sample arranges its own controls.
 
-The shell mirrors the current WinUI Gallery hierarchy without transferring native ownership between Winio children. The integrated Windows App SDK `TitleBar` provides the single visible pane-toggle button and Mica-backed window chrome. The NavigationView disables its own back and pane-toggle buttons so the window does not expose a second navigation chrome. The standalone AutoSuggestBox remains a normal Winio child, but the shell lays it into the TitleBar visual band with a 580-DIP maximum width and hides it when a narrow window cannot reserve enough space around the app title and system caption buttons.
+The shell sends `SetBounds(Rect)` to the active sample. Home owns a Winio `ScrollView` directly. Control routes use a `GalleryPage` with one vertical `ScrollView`; each page can contain several `GalleryExample` cards.
 
-The NavigationView is 300 DIPs wide while expanded and 48 DIPs while compact. The shared page title, description, and routed sample bounds use the same pane-width state, so collapsing the pane reclaims the horizontal space instead of leaving a 300-DIP blank gutter. Top-level catalog entries carry native `SymbolIcon` values; leaf route identity remains the stable catalog ID. UI Automation verifies that the standalone search stays inside the TitleBar band, the NavigationView does not expose its legacy toggle button, the TitleBar toggle compacts and reopens the pane, and page content shifts with that state.
+The Winio run loop starts the current component's `model.start()` future after each message or event. Once a route replaces the boxed component, the next iteration polls the new sample. The UIA smoke checks that the previous ToggleButton controls leave the window's automation tree after navigating to NumberBox.
 
-## Search ownership
+## Window chrome and navigation
 
-The Gallery AutoSuggestBox remains a separate shell child instead of being assigned to `NavigationView.AutoSuggestBox` or `TitleBar.Content`. A Winio child already owns its native element through the Winio Canvas; transferring that same element into another native parent would make ownership and reparenting ambiguous. The shell positions the standalone control in the TitleBar visual band while keeping one clear Winio owner. It uses the same catalog as NavigationView and routes only stable sample IDs or exact ID/title matches.
+`IntegratedTitleBar` provides the native title bar, pane-toggle button, and Mica-backed window chrome. The system caption buttons remain available. `NavigationView` hides its own back and pane-toggle buttons to avoid duplicate controls.
 
-## Gallery page and ControlExample card presentation
+The navigation pane is 300 DIPs wide when expanded and 48 DIPs when compact. The shell uses its current width to place the page title, description, search, and routed sample. Collapsing the pane gives that space back to the content.
 
-`apps/gallery/src/chrome.rs` provides the app-local page and card primitives. `GalleryPage` owns exactly one vertical Winio `ScrollView`, disables horizontal scrolling, exposes its content container, and maintains a measured extent sentinel at the current page content height. `GalleryExample` is a card-local Canvas root under that page. Its theme-aware Borders, labels, source disclosure and source TextBox live inside the root; the sample creates controls with the card as their `AsContainer` from construction time. Cards do not own page scrolling or sample-specific option state. Container-style wrappers such as Expander can expose their native content Canvas through AsContainer, allowing nested Winio children to be constructed under the native control from the outset rather than reparented later.
+The shell positions the search box in the title-bar band, with a maximum width of 580 DIPs. When the window becomes too narrow for the title and system caption buttons, it hides the search box.
 
-`CardLayout` is deterministic and caps readable width at 1064 DIP. At wide widths the primary example remains on the left while Output and Options occupy an auxiliary column. Below the compact breakpoint those auxiliary regions stack vertically. Each Source code toggle starts collapsed and reveals compile-time Rust source from `include_str!` in a 360-DIP read-only WinUI TextBox. The source viewer uses monospaced no-wrap text, remains selectable/copyable, and owns its horizontal/vertical text scrolling while `GalleryPage` remains the single page-level ScrollView. `stack_cards` places cards with a 16-DIP gap and computes page extent from the current card heights, so expanding a card's bounded source viewer moves later cards by a predictable amount. Resize and compact NavigationView changes recompute card widths and stack positions.
+### Why search stays a separate Winio child
 
-ToggleButton proves the multi-example route with two independent native examples: a nullable three-state control with the live Three-state option, and a separate basic two-state control. Each card has its own output, source-expanded state, and distinct accessible source toggle name. The UIA smoke checks one routed ScrollViewer, independent interactions, card displacement and scroll extent, whole-page scrolling with fixed shell chrome, route cleanup, and narrow card layout. NumberBox proves a live small-change option; TreeView retains width-derived sizing for Root and Leaf text; the smoke also keeps the Search/NumberBox geometry and TeachingTip popup lifecycle checks.
+Winio already attaches the native `AutoSuggestBox` to its own Canvas. Moving the same element into `NavigationView.AutoSuggestBox` or `TitleBar.Content` would assign it a different native parent while Winio still owns the original parent relationship.
 
-## Further work
+The shell instead positions the existing child in the title-bar band. Search routes use stable catalog IDs or exact ID/title matches; the search box does not need to change native parent.
 
-The main gaps are control breadth and sample depth: more useful projected controls still need wrapper APIs and Gallery routes, and existing controls can gain additional examples/options where they exercise distinct behavior. Source syntax highlighting and a dedicated copy button are optional polish beyond the native TextBox selection/copy behavior. Keyboard/focus, high-contrast/theme, DPI, and packaging/release coverage can be filled in as the project approaches a first release.
+UI Automation checks title-bar search placement, the single pane-toggle control, pane collapse/reopen, and the resulting content movement.
+
+## Pages and example cards
+
+`apps/gallery/src/chrome.rs` implements the shared page and card layout.
+
+- `GalleryPage` owns one vertical `ScrollView`, disables horizontal page scrolling, and measures the current content height.
+- `GalleryExample` owns a card-local Canvas containing borders, labels, the example area, output, options, and source disclosure.
+- Each sample constructs its native controls under the card's `AsContainer`. Controls with their own content Canvas, such as Expander, can likewise own Winio children from creation.
+- Cards do not own page scrolling or the sample-specific state of their options.
+
+`CardLayout` caps readable width at 1064 DIPs. Wide cards place the example on the left and Output/Options beside it; narrow cards stack those regions. `stack_cards` inserts a 16-DIP gap and updates card positions whenever content height or available width changes.
+
+Each card initially hides its Rust source. The Source toggle reveals text embedded at compile time with `include_str!` inside a read-only WinUI TextBox up to 360 DIPs high. The viewer supports selection, copy, and independent horizontal/vertical text scrolling. Expanding it pushes following cards downward without changing the page's scroll owner.
+
+## Runtime checks
+
+`mise run smoke` launches the Gallery and runs Windows UI Automation checks. Examples include:
+
+- ToggleButton: two independent cards, three-state versus two-state selection, separate output, source expansion, and route cleanup.
+- NumberBox: native range input and a live small-change option.
+- TreeView: native expansion and leaf invocation while card width changes.
+- TeachingTip: native popup open/close behavior.
+- Search and window chrome: correct title-bar geometry and navigation reflow.
+
+The [control inventory](control-inventory.md) records additional controls and the interactions currently tested.
+
+## Remaining coverage
+
+The Gallery does not yet cover every WinUI feature or runtime environment. Keyboard and focus behavior, high-contrast and theme changes, DPI changes, and packaging/release paths need further testing. Source syntax highlighting and a separate copy button are optional improvements; source selection and copying already work through the native TextBox.

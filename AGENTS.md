@@ -2,7 +2,7 @@
 
 ## Scope
 
-winio-winui-ext extends upstream Winio with Windows App SDK / WinUI capabilities that are missing from the upstream public surface.
+winio-winui-ext adds Windows App SDK / WinUI capabilities that Winio's public API does not provide.
 
 - Keep the dependency on upstream Winio.
 - Do not fork or copy the Winio backend to add controls here.
@@ -19,15 +19,15 @@ Develop and review coherent capability batches. Do not land one `main` commit pe
 Each batch must have one clear runtime or API goal. It may include related wrappers, projection additions, Gallery samples, tests, and documentation changes.
 
 Keep exploration local or on a branch while feasibility or value is unknown.
-Open the first correct authority PR when a minimal runtime/canary slice shows all three conditions:
+Open a PR for the capability batch when a small runtime test establishes all three conditions:
 - the direction is technically feasible;
 - it is materially useful;
 - no known blocker is likely to overturn it.
 Continue broader control coverage, polish, UIA expansion, cleanup, and review fixes on that PR. PR-ready does not mean implementation-complete or accepted.
-Treat PR commits as review and evidence carriers. Additive review commits are expected.
+Use PR commits to record implementation, tests, and review fixes. Add review commits when needed.
 The maintainer uses `Merge-NyaGitHubPullRequest` to squash the accepted tree.
 
-Irreversible-number caution applies to duplicate, successor, or replacement PRs. Do not use it to delay the first correct PR.
+Check existing PRs before creating a new one. Avoid duplicate or replacement PRs, but do not delay the first PR once all three conditions are met.
 Use small checkpoint commits while investigating. Keep unrelated cleanup out of the batch.
 
 Do not disturb a dirty worktree that may belong to another session or agent.
@@ -35,7 +35,7 @@ Do not disturb a dirty worktree that may belong to another session or agent.
 - Never stash, clean, reset, switch away from, or overwrite foreign in-progress work.
 - Use another worktree, or stop and inspect ownership first.
 
-## Generated boundary
+## Generated bindings
 
 - `crates/winio-winui-bindings/src/generated.rs` is generated output.
 - `crates/winio-winui-bindings/src/supplemental.types.txt` is the maintained supplemental projection inventory that drives generation.
@@ -53,7 +53,7 @@ Use these gates when bindings change:
 
 ## Runtime acceptance
 
-Compile-only projection is not sufficient evidence for a WinUI capability.
+Generated types and a passing build do not prove that a WinUI control works.
 
 For a user-facing control or interaction:
 
@@ -85,4 +85,4 @@ Prefer the repository tasks over ad-hoc cargo command variants:
 - mise run smoke — Windows Gallery runtime/UIA acceptance;
 - binding tasks above when projection changes.
 
-Document a defer decision with the observed runtime/API constraint. Do not infer support from metadata presence alone.
+When deferring a control, record the runtime or API limitation that prevented implementation. Do not infer supported behavior from metadata types.

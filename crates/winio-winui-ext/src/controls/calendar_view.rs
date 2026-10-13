@@ -12,11 +12,10 @@ use winio_winui_bindings::Microsoft::UI::Xaml::Controls::{
 use super::date_picker::{Date, from_native_date, to_native_date};
 use crate::native::NativeElement;
 
-/// A native inline WinUI CalendarView with an intentionally single-date contract.
+/// Shows an inline WinUI CalendarView with one selectable date.
 ///
-/// The native control also supports multiple selection. This wrapper fixes
-/// SelectionMode to Single so its public API stays aligned with the shared
-/// time::Date picker surface instead of exposing a second collection policy.
+/// The native control also supports multiple selection. This wrapper sets
+/// SelectionMode to Single and uses time::Date for its selected value.
 #[derive(Debug)]
 pub struct CalendarView {
     native: NativeCalendarView,

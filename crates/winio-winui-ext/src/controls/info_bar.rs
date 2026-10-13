@@ -112,8 +112,7 @@ impl Component for InfoBar {
 
     async fn init(parent: Self::Init<'_>, _sender: &ComponentSender<Self>) -> Result<Self> {
         let native = NativeInfoBar::new()?;
-        // This normal COM interface cast proves the supplemental projection
-        // returns an object in the existing Winio WinUI type universe.
+        // Cast to Winio's FrameworkElement type before attaching the control.
         let framework_element =
             native.cast::<winio_winui3::Microsoft::UI::Xaml::FrameworkElement>()?;
         let element = NativeElement::new(parent, framework_element)?;

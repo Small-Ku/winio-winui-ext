@@ -124,7 +124,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "Home",
         section: None,
         keywords: &["gallery", "samples"],
-        description: "Browse native WinUI extension samples and shell capabilities.",
+        description: "Explore WinUI controls running inside a Winio application.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ToggleButton,
@@ -132,7 +132,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "ToggleButton",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["toggle", "button", "nullable", "state"],
-        description: "Three-state native ToggleButton.",
+        description: "Switch between on, off, and indeterminate states.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::RepeatButton,
@@ -140,7 +140,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "RepeatButton",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["repeat", "button", "hold", "delay", "interval"],
-        description: "Native RepeatButton with explicit delay/interval and typed repeated clicks.",
+        description: "Press and hold to trigger repeated clicks after a configurable delay.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ToggleSwitch,
@@ -148,7 +148,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "ToggleSwitch",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["toggle", "switch", "boolean", "state"],
-        description: "Native ToggleSwitch with typed on/off events.",
+        description: "Turn a switch on or off and see its state change.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::RadioButtons,
@@ -156,7 +156,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "RadioButtons",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["radio", "selection", "options"],
-        description: "Native RadioButtons container with stable option IDs.",
+        description: "Choose a radio option and read its stable ID.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::CalendarDatePicker,
@@ -164,7 +164,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "CalendarDatePicker",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["calendar", "date", "picker", "nullable", "flyout"],
-        description: "Native CalendarDatePicker reusing time::Date for nullable date selection.",
+        description: "Choose a date or clear the selected date.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::CalendarView,
@@ -172,7 +172,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "CalendarView",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["calendar", "date", "inline", "selection", "month"],
-        description: "Native inline CalendarView with a bounded single-date selection contract.",
+        description: "Select one date from an inline calendar.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::DatePicker,
@@ -180,7 +180,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "DatePicker",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["date", "picker", "calendar", "day", "month", "year"],
-        description: "Native DatePicker using time::Date calendar-day values.",
+        description: "Choose a date using the native picker.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::DropDownButton,
@@ -188,7 +188,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "DropDownButton",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["drop", "down", "button", "flyout", "menu"],
-        description: "Native DropDownButton with Winio-owned attached flyout content.",
+        description: "Open a flyout containing Winio controls.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::Expander,
@@ -196,7 +196,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "Expander",
         section: Some(GallerySectionId::Layout),
         keywords: &["expander", "expand", "collapse", "layout", "content"],
-        description: "Native Expander hosting Winio-owned nested content.",
+        description: "Expand or collapse content containing Winio controls.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::TwoPaneView,
@@ -204,7 +204,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "TwoPaneView",
         section: Some(GallerySectionId::Layout),
         keywords: &["layout", "panes", "adaptive", "split"],
-        description: "Adaptive two-pane layout with wrapper-owned Winio pane containers.",
+        description: "Resize a layout containing Winio controls in two panes.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::SplitView,
@@ -212,7 +212,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "SplitView",
         section: Some(GallerySectionId::Layout),
         keywords: &["pane", "content", "layout", "overlay", "inline"],
-        description: "Native two-region pane/content layout with typed pane lifecycle events.",
+        description: "Open and close a side pane next to the main content.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::Viewbox,
@@ -220,7 +220,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "Viewbox",
         section: Some(GallerySectionId::Layout),
         keywords: &["layout", "scale", "content"],
-        description: "Native Viewbox scaling a wrapper-owned Canvas of Winio content.",
+        description: "Scale a Winio control inside a Viewbox.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::Image,
@@ -228,7 +228,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "Image",
         section: Some(GallerySectionId::Layout),
         keywords: &["image", "bitmap", "media", "source", "stretch"],
-        description: "Native Image with explicit ImageSource ownership and offline bitmap loading.",
+        description: "Display an image from a bitmap or URI.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::PersonPicture,
@@ -236,7 +236,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "PersonPicture",
         section: Some(GallerySectionId::StatusInfo),
         keywords: &["person", "picture", "avatar", "initials", "badge"],
-        description: "Native PersonPicture with display-name, initials, and badge state.",
+        description: "Display a name, initials, and a badge.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::InfoBar,
@@ -244,7 +244,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "InfoBar",
         section: Some(GallerySectionId::StatusInfo),
         keywords: &["info", "status", "message"],
-        description: "Supplemental native InfoBar.",
+        description: "Show a message that can be closed.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::InfoBadge,
@@ -252,7 +252,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "InfoBadge",
         section: Some(GallerySectionId::StatusInfo),
         keywords: &["badge", "notification", "count", "value"],
-        description: "Native InfoBadge with a numeric value round-trip.",
+        description: "Display a numeric badge and read its value.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::NumberBox,
@@ -260,7 +260,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "NumberBox",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["number", "numeric", "spin"],
-        description: "Native NumberBox with range and inline spin buttons.",
+        description: "Enter a number or change it using spin buttons.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::PasswordBox,
@@ -268,7 +268,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "PasswordBox",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["password", "secure", "input", "reveal"],
-        description: "Native PasswordBox with safe typed change notification.",
+        description: "Enter a password; the sample reports its length, not its contents.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ProgressBar,
@@ -276,7 +276,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "ProgressBar",
         section: Some(GallerySectionId::StatusInfo),
         keywords: &["progress", "loading", "range"],
-        description: "Native ProgressBar with determinate and indeterminate state.",
+        description: "Show a measured value or indeterminate progress.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ProgressRing,
@@ -284,7 +284,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "ProgressRing",
         section: Some(GallerySectionId::StatusInfo),
         keywords: &["progress", "ring", "loading", "indeterminate"],
-        description: "Native ProgressRing with determinate and indeterminate states.",
+        description: "Show progress as a ring with a value or animation.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::RichEditBox,
@@ -292,7 +292,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "RichEditBox",
         section: Some(GallerySectionId::Text),
         keywords: &["rich", "text", "editor", "document", "formatting"],
-        description: "Native RichEditBox with plain-text convenience and a full RichEditTextDocument escape hatch.",
+        description: "Edit formatted text and access its native RichEditTextDocument.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::RatingControl,
@@ -300,7 +300,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "RatingControl",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["rating", "stars", "score", "value"],
-        description: "Native RatingControl with typed value changes.",
+        description: "Set a rating and read the selected value.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::SplitButton,
@@ -308,7 +308,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "SplitButton",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["split", "button", "flyout", "action"],
-        description: "Native SplitButton with owned flyout content.",
+        description: "Run the primary action or open its flyout.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ToggleSplitButton,
@@ -316,7 +316,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "ToggleSplitButton",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["toggle", "split", "button", "flyout", "checked"],
-        description: "Native ToggleSplitButton with typed check-state and flyout lifecycle events.",
+        description: "Toggle the button state or open its flyout.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ColorPicker,
@@ -324,7 +324,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "ColorPicker",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["color", "picker", "rgba", "hex"],
-        description: "Native compact ColorPicker with typed RGBA changes.",
+        description: "Choose a color and read its RGBA value.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::CommandBar,
@@ -332,7 +332,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "CommandBar",
         section: Some(GallerySectionId::MenusToolbars),
         keywords: &["command", "bar", "toolbar", "overflow", "action"],
-        description: "Native CommandBar with stable primary and overflow actions.",
+        description: "Invoke primary commands or open overflow actions.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::CommandBarFlyout,
@@ -340,7 +340,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "CommandBarFlyout",
         section: Some(GallerySectionId::MenusToolbars),
         keywords: &["command", "flyout", "toolbar", "menu", "action"],
-        description: "Native CommandBarFlyout with stable primary and secondary actions.",
+        description: "Open a command flyout with primary and secondary actions.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::MenuBar,
@@ -348,7 +348,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "MenuBar",
         section: Some(GallerySectionId::MenusToolbars),
         keywords: &["menu", "bar", "file", "help", "flyout"],
-        description: "Native MenuBar with stable descriptor-backed actions.",
+        description: "Open a menu and invoke a command.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::MenuFlyout,
@@ -356,7 +356,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "MenuFlyout",
         section: Some(GallerySectionId::MenusToolbars),
         keywords: &["menu", "flyout", "context", "action"],
-        description: "Native MenuFlyout with stable descriptor-backed actions.",
+        description: "Open a flyout menu and invoke a command.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ContentDialog,
@@ -364,7 +364,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "ContentDialog",
         section: Some(GallerySectionId::DialogsFlyouts),
         keywords: &["content", "dialog", "modal", "primary", "secondary"],
-        description: "Native ContentDialog with Winio-owned content and typed lifecycle events.",
+        description: "Open a dialog containing Winio controls and handle its result.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::Flyout,
@@ -372,7 +372,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "Flyout",
         section: Some(GallerySectionId::DialogsFlyouts),
         keywords: &["flyout", "popup", "content", "anchor"],
-        description: "Native Flyout with Winio-owned interactive content and lifecycle events.",
+        description: "Open a popup containing interactive Winio controls.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::TimePicker,
@@ -380,7 +380,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "TimePicker",
         section: Some(GallerySectionId::BasicInput),
         keywords: &["time", "picker", "clock", "duration", "minute"],
-        description: "Native TimePicker using std::time::Duration for time-of-day values.",
+        description: "Choose a time of day using the native picker.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::TeachingTip,
@@ -388,7 +388,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "TeachingTip",
         section: Some(GallerySectionId::DialogsFlyouts),
         keywords: &["teaching", "tip", "popup"],
-        description: "Native TeachingTip popup lifecycle.",
+        description: "Open a teaching tip and close it with the native button.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::BreadcrumbBar,
@@ -396,7 +396,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "BreadcrumbBar",
         section: Some(GallerySectionId::Collections),
         keywords: &["breadcrumb", "path", "navigation", "hierarchy"],
-        description: "Native BreadcrumbBar backed by a WinUI-bindable iterable and stable descriptor IDs.",
+        description: "Navigate a path using native breadcrumb items.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::PipsPager,
@@ -404,7 +404,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "PipsPager",
         section: Some(GallerySectionId::Collections),
         keywords: &["pips", "pager", "page", "carousel", "navigation"],
-        description: "Native PipsPager with explicit navigation buttons and typed selection changes.",
+        description: "Change pages using previous and next buttons.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::SelectorBar,
@@ -412,7 +412,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "SelectorBar",
         section: Some(GallerySectionId::Collections),
         keywords: &["selector", "tabs", "selection"],
-        description: "Native SelectorBar with stable item IDs.",
+        description: "Select an item and read its stable ID.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::TabView,
@@ -420,7 +420,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "TabView",
         section: Some(GallerySectionId::Collections),
         keywords: &["tabs", "selection", "collection"],
-        description: "Native TabView with stable tab IDs and typed selection changes.",
+        description: "Select tabs and host Winio controls inside a tab page.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::FlipView,
@@ -428,7 +428,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "FlipView",
         section: Some(GallerySectionId::Collections),
         keywords: &["flip", "view", "pager", "carousel", "selection"],
-        description: "Native FlipView with descriptor-backed pages and typed selection changes.",
+        description: "Move between pages and read the selected page.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::GridView,
@@ -436,7 +436,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "GridView",
         section: Some(GallerySectionId::Collections),
         keywords: &["grid", "tiles", "selection", "collection"],
-        description: "Native selectable tiles backed by stable descriptor IDs.",
+        description: "Select a tile and read its stable ID.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::ItemsView,
@@ -444,7 +444,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "ItemsView",
         section: Some(GallerySectionId::Collections),
         keywords: &["items", "list", "selection", "collection"],
-        description: "Native virtualized list with stable descriptor IDs and single selection.",
+        description: "Select one list item and read its stable ID.",
     },
     GallerySampleDescriptor {
         kind: GallerySampleKind::TreeView,
@@ -452,7 +452,7 @@ pub const CATALOG: &[GallerySampleDescriptor] = &[
         title: "TreeView",
         section: Some(GallerySectionId::Collections),
         keywords: &["tree", "hierarchy", "collection"],
-        description: "Native TreeView with stable node IDs.",
+        description: "Expand a tree node and invoke a leaf item.",
     },
 ];
 

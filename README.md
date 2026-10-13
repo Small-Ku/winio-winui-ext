@@ -1,50 +1,92 @@
 # winio-winui-ext
 
-This workspace is a Windows-only downstream extension crate for [`winio`](https://crates.io/crates/winio). It hosts native WinUI 3 controls as ordinary Winio components through the public `winio-handle` escape hatches. The gallery is a small conformance app and runtime smoke target; it does not claim parity with the WinUI Gallery.
+Native Windows App SDK / WinUI 3 controls for applications built with [Winio](https://github.com/compio-rs/winio).
 
-The bridge owns a native `FrameworkElement`, adds it to Winio's native canvas, retains only a weak parent reference, and removes the control when dropped. Wrappers implement Winio's component and widget traits and forward native events through `ComponentSender`. This keeps Winio and its backend unmodified while letting this crate add controls that matter to downstream applications.
+`winio-winui-ext` adds Windows-only controls that Winio does not currently expose as high-level components. It uses Winio's public window and container handles; it does not fork or replace the Winio backend.
+
+The workspace also contains a Windows Gallery application. Each sample creates real native WinUI controls, and the smoke tests exercise their UI Automation and event behavior.
+
+## What it provides
+
+- Native controls such as `NavigationView`, `AutoSuggestBox`, `TreeView`, `NumberBox`, `InfoBar`, `CalendarView`, `CommandBar`, `RichEditBox`, and `ItemsView`.
+- Container and popup controls, including `SplitView`, `TwoPaneView`, `Flyout`, `ContentDialog`, and `TeachingTip`, that can own Winio children.
+- `IntegratedTitleBar` for a native Windows App SDK title bar, system caption buttons, and optional Mica backdrop.
+- Typed Rust events and stable item IDs for controls that support selection or actions.
+
+Not every WinUI type has a wrapper. See the [control inventory](docs/control-inventory.md) for implemented controls, deferred controls, and the specific runtime checks performed for each.
 
 ## Compatibility
 
-The workspace pins `winio = 0.12.0`, `winio-winui3 = =0.4.4`, and the Windows 0.62 type family. Keep these aligned: the supplemental projection must share the WinRT type universe used by the Winio backend. Do not independently upgrade the projection or introduce a second Windows type universe.
+This workspace currently uses:
 
-## Build and run
+| Dependency | Version |
+| --- | --- |
+| `winio` | `0.12.0` |
+| `winio-winui3` | `0.4.5` |
+| `windows` / Windows support crates | `0.62` family |
 
-Install/activate the repository's `mise` tools, then use the checked-in tasks. Rust operations normally run through Mr Boxington (`mbx`):
+The supplementary Rust bindings were previously generated against the `winio-winui3 0.4.4` type inventory. That generation baseline is recorded in [`bindings.lock.toml`](crates/winio-winui-bindings/src/bindings.lock.toml); it is not the current Cargo dependency version. The Windows App SDK `2.5.1` pin identifies the metadata used to generate those bindings, not a separately established minimum runtime version.
+
+Keep the upstream WinRT type dependencies compatible when updating these packages. Do not regenerate bindings or change the projection baseline as part of an unrelated dependency update.
+
+## Use a control
+
+`winio-winui-ext` is not currently published to crates.io (`publish = false`). Add it as a Git or local path dependency while developing.
+
+Inside a Winio `Component::init`, construct a control under its final Winio parent container:
+
+```rust
+use winio::prelude::*;
+use winio_winui_ext::{NumberBox, NumberBoxSpinPlacement};
+
+init! {
+    number: NumberBox = (parent) => {
+        size: Size::new(260.0, 32.0)
+    }
+}
+number.set_minimum(0.0)?;
+number.set_maximum(100.0)?;
+number.set_value(10.0)?;
+number.set_spin_button_placement(NumberBoxSpinPlacement::Inline)?;
+```
+
+`parent` is the borrowed container passed to your component. The complete example, including `ValueChanged` event handling, is in [the NumberBox Gallery sample](apps/gallery/src/samples/number_box.rs).
+
+## Build and test
+
+On Windows, install the tools declared in [`mise.toml`](mise.toml), then run:
 
 ```powershell
 mise run doctor
-mise run fmt
-mise run check
-mise run clippy
-mise run test
+mise run ci
 mise run build
 mise run smoke
 ```
 
-`smoke` builds the Gallery and uses Windows UI Automation to verify the integrated native TitleBar plus AutoSuggestBox, InfoBadge, InfoBar, NavigationView, NumberBox, RadioButtons, SelectorBar, TeachingTip, ToggleButton, and TreeView behavior. Normal builds consume committed generated Rust only and do not acquire WinMD metadata; metadata regeneration and comparison are separate gates:
+- `ci` checks formatting, runs Clippy, and runs the workspace tests.
+- `build` builds the Gallery and workspace targets.
+- `smoke` launches the Gallery and checks real WinUI controls through Windows UI Automation, including native interactions.
+
+For metadata generation, use the separate tasks. Normal builds use the checked-in Rust bindings and do not download WinMD files.
 
 ```powershell
 mise run bindings
 mise run bindings-check
+mise run bindings-test
 ```
 
-## Current scope
+See [supplemental bindings](docs/supplemental-bindings.md) for the generator, input packages, recorded hashes, and verification steps.
 
-The reference wrappers are an integrated native WinUI `TitleBar`, native upstream `Primitives::ToggleButton`, `ContentDialog`, `PasswordBox`, `ProgressBar`, and `TabView`, plus supplemental AutoSuggestBox, BreadcrumbBar, CalendarDatePicker, ColorPicker, CommandBar, DatePicker, DropDownButton, Expander, FlipView, GridView, InfoBadge, InfoBar, ItemsView, MenuBar, NavigationView, NumberBox, PersonPicture, PipsPager, ProgressRing, RadioButtons, RatingControl, SelectorBar, SplitButton, SplitView, TimePicker, ToggleSplitButton, ToggleSwitch, TeachingTip, TreeView, TwoPaneView, and Viewbox controls. SwipeControl is deferred until Gallery smoke can drive a real native swipe gesture and verify action invocation.
+## How the Gallery works
 
-ToggleButton preserves its two-state interaction default; the Gallery enables three-state mode and verifies a real `None`/indeterminate round-trip. Because the 0.4.4 generated `IsChecked` getter cannot represent a null `IReference<bool>`, that nullable read stays behind one narrow raw `IToggleButton` ABI call.
+The Gallery demonstrates controls on routed pages. A page can contain several `GalleryExample` cards with an example, live options, output, and selectable Rust source. Pages use one Winio scroll owner, while each card creates its controls under the card's native container.
 
-`IntegratedTitleBar` takes an ordinary Winio window through the public `AsWindow + AsContainer` bridge, extends the XAML client area into the title-bar region, registers the native Windows App SDK `TitleBar`, exposes its back/pane-toggle requests, and can apply the native Mica backdrop while preserving system caption controls. AutoSuggestBox emits text, chosen-suggestion, and submitted-query events; suggestions carry stable IDs in native `Tag` values. NavigationView supports recursive main/footer menu items, stable selected IDs, pane/settings state, shell-chrome visibility, symbol icons, header text, and back requests. BreadcrumbBar uses a reusable non-agile `Microsoft.UI.Xaml.Interop.IBindableIterable` adapter to realize native breadcrumb item peers from stable descriptors and reports clicked stable IDs. NumberBox exposes value/range/small-change/spin-placement plus typed old/new `ValueChanged` events. PasswordBox wraps the upstream native control with header/placeholder/password-character/length/reveal APIs and a typed change event; the Gallery reports only password length rather than echoing the secret. ColorPicker reuses Winio `Color` for RGBA state, alpha/visibility controls, and typed old/new color events. DatePicker uses the established `time::Date` calendar-day type rather than introducing another date struct or exposing WinRT `DateTime`. CalendarDatePicker reuses the same `time::Date` conversion for nullable calendar selection and flyout state. TimePicker uses `std::time::Duration` for time-of-day values instead of exposing WinRT `TimeSpan`, with minute/clock configuration and typed old/new time events. CommandBar owns stable descriptor-backed primary/overflow AppBarButton actions and emits their IDs. MenuBar likewise owns top-level menus plus stable MenuFlyoutItem actions without reparenting Winio children. PersonPicture exposes native display-name, initials, badge, group, and image-preference state without introducing parallel value types. PipsPager exposes page count/current index, visible-pip limits, previous/next visibility, wrap mode, and typed index changes. ProgressRing exposes active/indeterminate state plus determinate range/value without inventing a parallel progress model. GridView owns stable descriptor-backed native tile items and preserves selection by stable ID across source replacement. ItemsView uses the reusable XAML-bindable source adapter with the native default string presentation and exposes stable descriptor IDs over single selection. FlipView owns descriptor-backed native pages, exposes selected index/ID, and reports typed selection changes. ContentDialog inherits the routed page XamlRoot, owns a Winio-compatible content Canvas, and emits typed open/button/closing events. TeachingTip targets an existing Winio widget through the public WinUI handle bridge and reports native close reasons from its popup lifecycle. TreeView accepts stable recursive node descriptors and emits stable IDs from native `Expanding` and `ItemInvoked` events. The Gallery drives these through their native UI Automation patterns and verifies the resulting Winio-owned window titles.
+The title bar, navigation, and search are separate Winio-owned controls. Samples use stable route IDs; replacing a page drops its previous controls. [Gallery architecture](docs/gallery-architecture.md) explains the ownership rules and layout.
 
-The Gallery now uses a typed sample catalog as the source for stable routes, sectioned NavigationView items/icons, and AutoSuggestBox suggestions. Its shell follows the current WinUI Gallery chrome model: a Mica-backed integrated TitleBar owns the visible pane toggle, search is laid into the title-bar band, NavigationView suppresses its duplicate back/pane buttons, and routed pages share a title/description content header that reflows between expanded and compact pane widths. One dynamically replaced boxed sample slot owns the currently selected page. See [the Gallery architecture](docs/gallery-architecture.md) for the component and layout boundaries. The AutoSuggestBox remains an independent Winio child: it is positioned visually in the title-bar band rather than reparented into `TitleBar.Content` or `NavigationView.AutoSuggestBox`, because moving a native element already owned by the Winio Canvas would make ownership ambiguous.
+The Gallery is an integration and regression-test application. It is not intended to reproduce every feature of Microsoft's WinUI Gallery.
 
-Supplemental bindings are no longer generated one control at a time. `winio-winui-bindings` builds one pinned broad XAML projection rooted at `Microsoft.UI.Xaml` and `Windows.UI.Xaml.Interop`, automatically references exact types already provided by `winio-winui3 0.4.4`, and follows bindgen dependency diagnostics to generate only missing supplemental dependencies. See [the supplemental bindings notes](docs/supplemental-bindings.md) for the projection boundary, provenance, and validation invariants. See [the control inventory](docs/control-inventory.md) for the distinction between upstream projection availability, supplemental projection availability, and wrapper coverage.
+## Source and license
 
-Routed control pages use one vertical ScrollView and can stack multiple reusable ControlExample cards with card-local native ownership, visible output, optional live options, and independently collapsed Rust source sections compiled into the app with include_str!. Wide layouts place output/options beside the primary example; narrow layouts stack them, and expanding source moves later cards while updating the page extent. Source is shown in a bounded read-only WinUI TextBox with monospaced no-wrap text, selection/copy support, and its own horizontal/vertical scrolling rather than stretching the page to the full source length. ToggleButton currently demonstrates two independent examples on one route. TwoPaneView owns two Canvas containers for Winio children and exposes adaptive layout configuration without reparenting hosted children. Viewbox owns a Canvas and applies native scaling to Winio children; callers set the extent used as its measured content size. SplitView owns separate Pane and Content Canvas hosts and reports native pane lifecycle events. TabView owns native tab items and emits selection changes carrying stable descriptor IDs. ToggleSplitButton reports check-state changes separately from its owned flyout lifecycle. The UIA smoke covers page scrolling, multi-card behavior, source selection/read-only state, responsive geometry, live ToggleButton/NumberBox options, the native ToggleSwitch on/off event path, RatingControl RangeValue behavior, ColorPicker hex edit/color-change behavior, CalendarDatePicker CalendarView/date-change behavior, DatePicker native selector/date-change behavior, PasswordBox protected ValuePattern/change behavior, TimePicker native selector/time-change behavior, Expander nested-content ownership, TwoPaneView pane-child hosting and paused-progress change, SplitView pane/content ownership and open/close events, Viewbox Winio-child scaling, DropDownButton expand/collapse flyout lifecycle, SplitButton primary/flyout lifecycle, CommandBar primary/overflow actions, MenuBar top-level/flyout actions, ContentDialog popup/content/Primary result lifecycle, PersonPicture native property round-trip, InfoBadge numeric value readback, RadioButtons selection, SelectorBar selection, BreadcrumbBar bindable-item realization/stable-ID invocation, GridView native tile realization/stable-ID selection, ItemsView default-item realization/selection, TabView stable-ID selection, PipsPager next/previous selection, ProgressBar and ProgressRing determinate/indeterminate state, FlipView virtualized-item selection, route replacement, and the Search/NumberBox, TreeView, and TeachingTip regressions. This project does not claim parity with the official WinUI Gallery.
+This repository is licensed under the [MIT License](LICENSE).
 
-## License
-
-The original source code in this repository is licensed under the MIT License. See [LICENSE](LICENSE).
-
-The generated WinUI bindings in crates/winio-winui-bindings/src/generated.rs are produced from Windows App SDK and WebView2 WinMD metadata. The input packages, versions, and hashes are recorded in crates/winio-winui-bindings/src/bindings.lock.toml. Microsoft SDK packages, metadata, and runtime redistributables remain subject to their applicable upstream license terms; this repository's MIT license does not relicense third-party materials.
+`crates/winio-winui-bindings/src/generated.rs` contains generated Rust API bindings. [`bindings.lock.toml`](crates/winio-winui-bindings/src/bindings.lock.toml) records the Windows App SDK and WebView2 metadata inputs used to produce it. The Microsoft SDKs and runtimes remain separate dependencies; the repository does not include their NuGet packages or runtime binaries.

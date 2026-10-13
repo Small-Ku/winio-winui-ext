@@ -82,7 +82,7 @@ impl Layoutable for ToggleButton {
 
 impl ToggleButton {
     fn checked_reference(&self) -> Result<Option<windows::Foundation::IReference<bool>>> {
-        // `winio-winui3 0.4.4` projects `IsChecked` as a non-optional
+        // `winio-winui3 0.4.5` still projects `IsChecked` as a non-optional
         // `IReference<bool>`, so its generated getter turns a legitimate null
         // WinRT reference into `Error::empty()`. Read the ABI directly to
         // preserve the nullable value without changing the projection crate.

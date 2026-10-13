@@ -15,9 +15,8 @@ use crate::native::NativeElement;
 
 /// A native WinUI Image with explicit native image-source ownership.
 ///
-/// ImageSource is intentionally exposed as the advanced escape hatch so callers
-/// are not forced into URI-only loading. BitmapImage and URI setters are
-/// conveniences on top of that native source model.
+/// Callers can provide an ImageSource directly. BitmapImage and URI setters
+/// provide simpler ways to set a native image source.
 #[derive(Debug)]
 pub struct Image {
     native: NativeImage,

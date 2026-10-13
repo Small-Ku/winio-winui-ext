@@ -1,12 +1,12 @@
-# WinUI control inventory (Winio 0.12 / winio-winui3 0.4.4)
+# WinUI control inventory
 
-This document separates three questions that should not be conflated:
+The workspace uses Winio `0.12.0` and `winio-winui3 0.4.5`. The bindings generator recorded the upstream `0.4.4` type inventory. The tables below distinguish three questions:
 
-1. Is a native WinUI type already projected by locked upstream `winio-winui3 0.4.4`?
-2. Is it present in this repository's broad supplemental XAML projection from the pinned Windows App SDK metadata?
-3. Has `winio-winui-ext` designed and runtime-tested a Winio wrapper for it?
+1. Does the generator's recorded `winio-winui3 0.4.4` type inventory already contain the native WinUI type?
+2. Does this repository's generated XAML binding file contain the type?
+3. Does `winio-winui-ext` implement and test a Winio wrapper for it?
 
-Projection availability alone is not wrapper completeness or proof that every native lifecycle/API can be hosted correctly.
+A generated type does not guarantee that a Winio wrapper exists or that its native interactions work.
 
 ## High-level Winio widgets and upstream projected equivalents
 
@@ -23,7 +23,7 @@ Projection availability alone is not wrapper completeness or proof that every na
 
 The upstream 0.4.4 projection also provides `ContentDialog` and `PasswordBox` directly; both now have extension wrappers below.
 
-## Controls absent upstream but available supplementally
+## Additional native types in generated bindings
 
 The following examples are absent as public control structs from the compatible `winio-winui3 0.4.4` projection but are present in the current broad supplemental `Microsoft.UI.Xaml` projection generated from the pinned Windows App SDK 2.5.1 metadata:
 
@@ -50,11 +50,11 @@ The following examples are absent as public control structs from the compatible 
 - `SplitView`, `ToggleSplitButton`, `Viewbox`, `Image`
 - `SwipeControl`, `SwipeItem`, `SwipeItems`
 
-This list demonstrates supplemental projection availability; it is not a wrapper roadmap promise. The broad generator also follows required dependencies outside the root namespace where bindgen proves they are needed. It does not generate the entire Microsoft metadata universe.
+This list records generated types, not promises to implement wrappers for each. The broad generator also follows required dependencies outside the root namespace where bindgen proves they are needed. It does not generate the entire Microsoft metadata universe.
 
-## Current extension wrappers
+## Implemented wrappers and tests
 
-| Wrapper | Projection source | Current proof |
+| Wrapper | Type source | Implementation and tests |
 | --- | --- | --- |
 | `IntegratedTitleBar` | supplemental `TitleBar` + upstream XAML `Window` | Public `AsWindow + AsContainer` bridge; pane/back events, chrome visibility and Mica helper; native custom title bar coexists with system caption buttons in UIA. |
 | `ToggleButton` | upstream `winio-winui3` | Native nullable three-state round-trip plus UIA TogglePattern event path. |
@@ -101,7 +101,7 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 | `GridView` | supplemental | Stable-ID tile descriptors are materialized as wrapper-owned native `GridViewItem` UIElements and supplied through the reusable non-agile `IBindableIterable`; replacement retention policy is covered by a deterministic helper test, and Gallery UIA verifies realization and `SelectionItemPattern` selection. |
 | `ItemsView` | supplemental | Descriptor-backed text values use the native default string presentation and default `StackLayout`; stable IDs are tracked by source index, with single selection and typed selection changes. Gallery UIA enumerates native `ItemContainer` peers in source order, selects the second with `SelectionItemPattern`, and verifies the selected peer and stable-ID output. See Microsoft's [ItemsView guidance](https://learn.microsoft.com/en-us/windows/apps/develop/ui/controls/itemsview). |
 
-### Candidates from the bounded control sweep
+### Other controls considered
 
 | Control | Classification | Reason |
 | --- | --- | --- |
@@ -121,7 +121,7 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 | `TableView` | Deferred: composite table behavior | ItemsSource is now available, but a useful table wrapper still needs a coherent contract for virtualized row selection, editable cells, sorting, grouping, and columns, plus runtime coverage for those interactions. |
 | `WrapPanel` | Deferred: projection boundary | It appears in current Gallery metadata but is absent from the checked-in supplemental Rust projection. No one-off bindgen filter is added for this layout type. |
 
-### ItemsSource unlock sweep
+### Collection controls considered
 
 | Control | Classification | Reason |
 | --- | --- | --- |
@@ -133,7 +133,7 @@ This list demonstrates supplemental projection availability; it is not a wrapper
 
 These classifications were checked against locked Winio 0.12 / `winio-winui3 0.4.4`, the current local supplemental projection, and the current official Gallery control metadata. Current metadata reference: [ControlInfoData.json](https://github.com/microsoft/WinUI-Gallery/blob/main/WinUIGallery/SampleSupport/Data/ControlInfoData.json).
 
-### Previously deferred controls
+### Controls still deferred
 
 `SwipeControl` remains deferred for this batch. Its action items are exposed through four native directional `SwipeItems` collections, and `SwipeItem.Invoked` requires per-item event-token ownership. The current Gallery smoke harness has no pointer-gesture driver to reveal the native actions before invoking them, so it cannot provide the required real-runtime invocation evidence without adding a new synthetic-input path.
 

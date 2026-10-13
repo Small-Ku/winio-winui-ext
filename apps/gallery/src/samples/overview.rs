@@ -25,7 +25,7 @@ impl Component for OverviewSample {
             page: ScrollView = (parent),
             heading: Label = (&page) => { text: "WinUI extension gallery" },
             summary: Label = (&page) => { text: "Explore native WinUI controls hosted as first-class Winio components." },
-            groups: Label = (&page) => { text: "Current groups: Basic input · Status and info · Dialogs and flyouts · Collections" },
+            groups: Label = (&page) => { text: "Choose a section from the navigation pane." },
             extent: Label = (&page) => { text: "" },
         }
         Ok(Self {
