@@ -15,7 +15,7 @@ version = "0.0.0"
 winio = { version = "0.12.0", default-features = false, features = ["winui"] }
 winio-handle = { version = "0.7.0", features = ["winui"] }
 time = { version = "0.3.55", default-features = false }
-winio_winui3 = { package = "winio-winui3", version = "=0.4.4", features = [
+winio_winui3 = { package = "winio-winui3", version = "=0.4.5", features = [
   "Foundation",
   "UI",
   "UI_Composition",

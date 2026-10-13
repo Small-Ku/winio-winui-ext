@@ -44,6 +44,8 @@ pub struct TabView {
     element: NativeElement,
     tabs: Vec<TabViewTabDescriptor>,
     items: Vec<NativeTabViewItem>,
+    hosted_pages: Vec<Option<MUXC::Canvas>>,
+    surface_brush: Option<winio_winui3::Microsoft::UI::Xaml::Media::Brush>,
     selection_changed_token: i64,
 }
 
@@ -55,6 +57,12 @@ impl TabView {
     /// Replaces tabs and preserves selection by stable ID where possible.
     /// Duplicate or empty IDs are rejected with `E_INVALIDARG`.
     pub fn set_tabs(&mut self, tabs: &[TabViewTabDescriptor]) -> Result<()> {
+        if self.hosted_pages.iter().any(Option::is_some) {
+            return Err(Error::new(
+                E_INVALIDARG,
+                "Cannot replace TabView tabs while Winio children are hosted; create a new TabView",
+            ));
+        }
         let mut ids = HashSet::with_capacity(tabs.len());
         if tabs
             .iter()
@@ -91,6 +99,7 @@ impl TabView {
         }
         self.tabs = tabs.to_vec();
         self.items = items;
+        self.hosted_pages = (0..self.items.len()).map(|_| None).collect();
         let selected = previous
             .and_then(|id| self.tabs.iter().position(|tab| tab.id == id))
             .or_else(|| (!self.tabs.is_empty()).then_some(0));
@@ -99,6 +108,62 @@ impl TabView {
         Ok(())
     }
 
+    /// Host native Winio children within a static tab's final Canvas owner.
+    ///
+    /// Call this after set_tabs and before creating the child controls. Do not
+    /// call set_tabs again until the hosted children have been dropped.
+    pub fn hosted_page(&mut self, index: usize) -> Result<BorrowedContainer<'_>> {
+        if self.items.get(index).is_none() {
+            return Err(Error::new(
+                E_INVALIDARG,
+                "Hosted TabView index is out of range",
+            ));
+        }
+        if self.hosted_pages[index].is_none() {
+            let canvas = MUXC::Canvas::new()?;
+            canvas.SetHorizontalAlignment(
+                winio_winui3::Microsoft::UI::Xaml::HorizontalAlignment::Stretch,
+            )?;
+            canvas.SetVerticalAlignment(
+                winio_winui3::Microsoft::UI::Xaml::VerticalAlignment::Stretch,
+            )?;
+            if let Some(brush) = &self.surface_brush {
+                canvas.SetBackground(brush)?;
+            }
+            self.items[index].SetContent(&canvas)?;
+            self.hosted_pages[index] = Some(canvas);
+        }
+        let Some(page) = self.hosted_pages[index].as_ref() else {
+            return Err(Error::new(E_INVALIDARG, "Hosted page did not initialize"));
+        };
+        Ok(BorrowedContainer::winui(page))
+    }
+
+    /// Extend the native selected Tab header surface through hosted Winio page content.
+    ///
+    /// Reapply after a theme change to resolve the current WinUI theme brush.
+    pub fn use_native_selected_header_surface(&mut self) -> Result<()> {
+        let key = windows::Foundation::PropertyValue::CreateString(&HSTRING::from(
+            "TabViewItemHeaderBackgroundSelected",
+        ))?
+        .cast::<windows::core::IInspectable>()?;
+        let brush = winio_winui3::Microsoft::UI::Xaml::Application::Current()?
+            .Resources()?
+            .Lookup(&key)?
+            .cast::<winio_winui3::Microsoft::UI::Xaml::Media::Brush>()?;
+        for page in self.hosted_pages.iter().flatten() {
+            page.SetBackground(&brush)?;
+        }
+        self.surface_brush = Some(brush);
+        Ok(())
+    }
+    /// Native content bounds of a hosted page, after XAML layout.
+    pub fn hosted_page_size(&self, index: usize) -> Result<Size> {
+        let Some(page) = self.hosted_pages.get(index).and_then(Option::as_ref) else {
+            return Err(Error::new(E_INVALIDARG, "No hosted TabView page at index"));
+        };
+        Ok(Size::new(page.ActualWidth()?, page.ActualHeight()?))
+    }
     pub fn selected_index(&self) -> Result<i32> {
         self.native.SelectedIndex()
     }
@@ -218,6 +283,8 @@ impl Component for TabView {
             element,
             tabs: Vec::new(),
             items: Vec::new(),
+            hosted_pages: Vec::new(),
+            surface_brush: None,
             selection_changed_token,
         })
     }

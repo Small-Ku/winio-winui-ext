@@ -2488,9 +2488,9 @@ dependencies = [
 
 [[package]]
 name = "winio-winui3"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fae2b768a02e48baa68ab29676f997f7a69db4c4a50e5e0327450381366a4115"
+checksum = "e55a2e2a45338a8465ccfe5fd8ae2ada606d4efe986a9f97baa81385c2e24d3f"
 dependencies = [
  "windows",
  "windows-collections",

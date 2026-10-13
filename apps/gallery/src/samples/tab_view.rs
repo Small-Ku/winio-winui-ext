@@ -8,6 +8,7 @@ use winio_winui_ext::{TabView, TabViewEvent, TabViewTabDescriptor, ToggleButtonE
 pub struct TabViewSample {
     page: GalleryPage,
     card: GalleryExample,
+    hosted_button: Child<Button>,
     tabs: Child<TabView>,
     viewport: Rect,
     source_expanded: bool,
@@ -40,10 +41,15 @@ impl Component for TabViewSample {
             TabViewTabDescriptor::new("overview", "Overview", "Overview tab content"),
             TabViewTabDescriptor::new("details", "Details", "Details tab content"),
             TabViewTabDescriptor::new("activity", "Activity", "Recent activity tab content"),
+            TabViewTabDescriptor::new("hosted", "Hosted", ""),
         ])?;
+        tabs.use_native_selected_header_surface()?;
+        let mut hosted_button = Child::<Button>::init(tabs.hosted_page(3)?).await?;
+        hosted_button.set_text("Native hosted button")?;
         Ok(Self {
             page,
             card,
+            hosted_button,
             tabs,
             viewport: Rect::zero(),
             source_expanded: false,
@@ -61,6 +67,7 @@ impl Component for TabViewSample {
                     expanded: state == Some(true),
                 },
             },
+            self.hosted_button => { ButtonEvent::Click => GallerySampleMessage::Emit("hosted:clicked".to_owned()) },
             self.tabs => {
                 TabViewEvent::SelectionChanged { selected_id: Some(id), .. } =>
                     GallerySampleMessage::Emit(format!("selected:{id}")),
@@ -87,7 +94,9 @@ impl Component for TabViewSample {
                 self.source_expanded = expanded;
                 self.reflow()?;
             }
-            GallerySampleMessage::Emit(value) if value.starts_with("selected:") => {
+            GallerySampleMessage::Emit(value)
+                if value.starts_with("selected:") || value.starts_with("hosted:") =>
+            {
                 self.card.set_output(&value)?;
                 sender.output(GallerySampleEvent::Output {
                     generation: self.generation,
@@ -102,13 +111,14 @@ impl Component for TabViewSample {
     async fn update_children(&mut self) -> Result<bool> {
         self.page.update_children().await?;
         self.card.update_children().await?;
-        self.tabs.update().await
+        Ok(self.tabs.update().await? | self.hosted_button.update().await?)
     }
 
     fn render_children(&mut self) -> Result<()> {
         self.page.render()?;
         self.card.render()?;
-        self.tabs.render()
+        self.tabs.render()?;
+        self.hosted_button.render()
     }
 }
 
@@ -123,6 +133,8 @@ impl TabViewSample {
             layout.primary.origin.x + 12.0,
             layout.primary.origin.y + 12.0,
         ))?;
+        self.hosted_button.set_loc(Point::new(20.0, 20.0))?;
+        self.hosted_button.set_size(Size::new(240.0, 48.0))?;
         self.tabs.set_size(Size::new(
             (layout.primary.size.width - 24.0).max(0.0),
             220.0,
